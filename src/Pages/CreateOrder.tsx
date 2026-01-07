@@ -210,16 +210,9 @@ function CreateOrder() {
     setIsCreatingOrder(true)
     
     try {
-      // Preparar los items para la API
-      const saleData: CreateSaleRequest = {
-        items: cartItems.map(item => ({
-          productId: item.product.id,
-          quantity: item.quantity
-        }))
-      }
       
       // Crear la venta usando el servicio
-      await salesService.createSale(businessId, saleData)
+      await salesService.createSale(businessId)
       
       // Limpiar carrito después de crear la orden
       setCartItems([])
