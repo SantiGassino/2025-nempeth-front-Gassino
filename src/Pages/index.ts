@@ -3,7 +3,6 @@ export { default as Authentication } from './Authentication';
 export { default as BusinessInfo } from './BusinessInfo';
 export { default as CreateGoal } from './CreateGoal';
 export { default as CreateOrder } from './CreateOrder';
-export { default as CreateOrderV2 } from './CreateOrderV2';
 export { default as EditProfile } from './EditProfile';
 export { default as GoalDetails } from './GoalDetails';
 export { default as Goals } from './Goals';

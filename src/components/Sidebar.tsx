@@ -68,7 +68,6 @@ const OWNER_NAVIGATION = [
   { name: 'Home', path: '/home', icon: HomeIcon },
   { name: 'Productos', path: '/products', icon: ShoppingBagIcon },
   { name: 'Crear Orden', path: '/orders/create', icon: DocumentTextIcon },
-  { name: 'Crear Orden V2', path: '/orders/create-v2', icon: DocumentTextIcon },
   { name: 'Historial de Ventas', path: '/sales-history', icon: ClipboardDocumentListIcon },
   { name: 'Ranking', path: '/internal-ranking', icon: TrophyIcon },
   { name: 'Analiticas', path: '/analytics', icon: ChartBarIcon },
@@ -80,7 +79,6 @@ const OWNER_NAVIGATION = [
 const EMPLOYEE_NAVIGATION = [
   { name: 'Home', path: '/home', icon: HomeIcon },
   { name: 'Crear Orden', path: '/orders/create', icon: DocumentTextIcon },
-  { name: 'Crear Orden V2', path: '/orders/create-v2', icon: DocumentTextIcon },
   { name: 'Historial de Ventas', path: '/sales-history', icon: ClipboardDocumentListIcon },
   { name: 'Ranking', path: '/internal-ranking', icon: TrophyIcon },
   { name: 'Perfil', path: '/profile', icon: UserIcon },

@@ -8,7 +8,6 @@ import EditProfile from './Pages/EditProfile'
 import Products from './Pages/Products'
 import BusinessInfo from './Pages/BusinessInfo'
 import CreateOrder from './Pages/CreateOrder'
-import CreateOrderV2 from './Pages/CreateOrderV2'
 import SalesHistory from './Pages/SalesHistory'
 import SaleDetails from './Pages/SaleDetails'
 import ResetPassword from './Pages/ResetPassword'
@@ -89,17 +88,6 @@ function AppRoutes() {
           <OwnerOrActiveEmployeeGuard>
             <Layout>
               <CreateOrder />
-            </Layout>
-          </OwnerOrActiveEmployeeGuard>
-        }
-      />
-
-      <Route
-        path="/orders/create-v2"
-        element={
-          <OwnerOrActiveEmployeeGuard>
-            <Layout>
-              <CreateOrderV2 />
             </Layout>
           </OwnerOrActiveEmployeeGuard>
         }
