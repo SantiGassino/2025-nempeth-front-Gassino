@@ -64,9 +64,16 @@ const TrophyIcon = ({ className }: { className?: string }) => (
   </svg>
 )
 
+const TableIcon = ({ className }: { className?: string }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+  </svg>
+)
+
 const OWNER_NAVIGATION = [
   { name: 'Home', path: '/home', icon: HomeIcon },
   { name: 'Productos', path: '/products', icon: ShoppingBagIcon },
+  { name: 'Mesas', path: '/tables', icon: TableIcon },
   { name: 'Crear Orden', path: '/orders/create', icon: DocumentTextIcon },
   { name: 'Historial de Ventas', path: '/sales-history', icon: ClipboardDocumentListIcon },
   { name: 'Ranking', path: '/internal-ranking', icon: TrophyIcon },
@@ -78,6 +85,7 @@ const OWNER_NAVIGATION = [
 
 const EMPLOYEE_NAVIGATION = [
   { name: 'Home', path: '/home', icon: HomeIcon },
+  { name: 'Mesas', path: '/tables', icon: TableIcon },
   { name: 'Crear Orden', path: '/orders/create', icon: DocumentTextIcon },
   { name: 'Historial de Ventas', path: '/sales-history', icon: ClipboardDocumentListIcon },
   { name: 'Ranking', path: '/internal-ranking', icon: TrophyIcon },

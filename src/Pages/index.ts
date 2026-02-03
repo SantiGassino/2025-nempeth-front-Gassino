@@ -14,3 +14,4 @@ export { default as ResetPassword } from './ResetPassword';
 export { default as PendingApproval } from './PendingApproval';
 export { default as SaleDetails } from './SaleDetails';
 export { default as SalesHistory } from './SalesHistory';
+export { default as Tables } from './Tables';
