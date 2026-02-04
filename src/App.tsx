@@ -18,6 +18,7 @@ import GoalDetails from './Pages/GoalDetails'
 import Ranking from './Pages/Ranking'
 import InternalRanking from './Pages/InternalRanking'
 import Tables from './Pages/Tables'
+import Reservations from './Pages/Reservations'
 import Layout from './components/Layout'
 import UnauthenticatedGuard from './guards/UnauthenticatedGuard'
 import OwnerGuard from './guards/OwnerGuard'
@@ -133,6 +134,17 @@ function AppRoutes() {
           <OwnerOrActiveEmployeeGuard>
             <Layout>
               <Tables />
+            </Layout>
+          </OwnerOrActiveEmployeeGuard>
+        }
+      />
+
+      <Route
+        path="/reservations"
+        element={
+          <OwnerOrActiveEmployeeGuard>
+            <Layout>
+              <Reservations />
             </Layout>
           </OwnerOrActiveEmployeeGuard>
         }

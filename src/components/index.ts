@@ -5,3 +5,4 @@ export { default as PasswordValidationList } from './PasswordValidationList';
 export { ProtectedRoute } from './ProtectedRoute';
 export { default as Sidebar } from './Sidebar';
 export { default as SuccesOperation } from './SuccesOperation';
+export { default as GanttModal } from './GanttModal';
