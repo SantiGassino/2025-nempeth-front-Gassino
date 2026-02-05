@@ -151,7 +151,7 @@ export const tableService = {
       // Validación: no se puede cambiar a RESERVED manualmente
       if (statusData.status === 'RESERVED') {
         throw new Error(
-          'No se puede cambiar manualmente a RESERVADO. El estado RESERVADO se asigna automáticamente 45 minutos antes del inicio de una reserva.',
+          'No se puede cambiar manualmente a RESERVADO. El estado RESERVADO se asigna automáticamente 30 minutos antes del inicio de una reserva y se libera 5 minutos después.',
         );
       }
 

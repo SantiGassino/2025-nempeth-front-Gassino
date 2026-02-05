@@ -125,7 +125,7 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
     return { lanes, totalLanes: laneEndTimes.length };
   };
 
-  // Calcular posición y ancho del buffer de 45 minutos antes de la reserva
+  // Calcular posición y ancho del buffer: 30 min antes + duración de la reserva + 5 min después
   const calculateBufferPosition = (reservation: GanttReservation) => {
     const startOfDay = new Date(currentDate);
     startOfDay.setHours(0, 0, 0, 0);
@@ -133,13 +133,15 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
     endOfDay.setHours(23, 59, 59, 999);
 
     const resStart = new Date(reservation.startDateTime);
+    const resEnd = new Date(reservation.endDateTime);
     
-    // Buffer de 45 minutos antes del inicio
-    const bufferStart = new Date(resStart.getTime() - 45 * 60 * 1000);
+    // Buffer: 30 minutos antes del inicio hasta 5 minutos después del fin
+    const bufferStart = new Date(resStart.getTime() - 30 * 60 * 1000);
+    const bufferEnd = new Date(resEnd.getTime() + 5 * 60 * 1000);
     
-    // Si el buffer empieza antes del día actual, cortarlo
+    // Si el buffer empieza/termina fuera del día actual, cortarlo
     const effectiveBufferStart = bufferStart < startOfDay ? startOfDay : bufferStart;
-    const effectiveBufferEnd = resStart < startOfDay ? startOfDay : (resStart > endOfDay ? endOfDay : resStart);
+    const effectiveBufferEnd = bufferEnd > endOfDay ? endOfDay : bufferEnd;
     
     // Si el buffer está completamente fuera del día, no mostrarlo
     if (effectiveBufferStart >= endOfDay || effectiveBufferEnd <= startOfDay) {
@@ -345,7 +347,7 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
                                     minWidth: '10px',
                                     backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(251, 191, 36, 0.3) 4px, rgba(251, 191, 36, 0.3) 8px)',
                                   }}
-                                  title="Tiempo de preparación (45 min) - Mesa bloqueada"
+                                  title="Buffer de reserva (30 min antes + 5 min después) - Mesa bloqueada"
                                 />
                               )}
                               
@@ -389,7 +391,7 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
                         backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(251, 191, 36, 0.3) 4px, rgba(251, 191, 36, 0.3) 8px)',
                       }}
                     />
-                    <span className="text-xs text-gray-600">Tiempo de preparación (45 min antes)</span>
+                    <span className="text-xs text-gray-600">Buffer (30 min antes + 5 min después)</span>
                   </div>
                   
                   {/* Estados de reserva */}

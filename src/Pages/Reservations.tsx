@@ -563,7 +563,7 @@ function ReservationModal({
             <label htmlFor="forced" className="text-sm text-gray-700">
               Forzar reserva (solo omite validación de capacidad)
               <span className="block mt-1 text-xs text-gray-500">
-                ⚠️ El solapamiento de horarios y buffer de 45 min son obligatorios
+                ⚠️ El solapamiento de horarios y buffer (30 min antes + 5 min después) son obligatorios
               </span>
             </label>
           </div>

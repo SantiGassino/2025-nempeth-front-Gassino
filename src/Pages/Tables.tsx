@@ -338,7 +338,7 @@ function ChangeStatusModal({ isOpen, onClose, onSave, currentStatus, isProcessin
             </div>
             <div className="p-3 mt-3 border border-yellow-200 rounded-lg bg-yellow-50">
               <p className="text-xs text-yellow-800">
-                ⚠️ <strong>Nota:</strong> El estado RESERVADO se asigna automáticamente 45 minutos antes de una reserva.
+                ⚠️ <strong>Nota:</strong> El estado RESERVADO se asigna automáticamente 30 minutos antes de una reserva y se libera 5 minutos después de su finalización.
               </p>
             </div>
           </div>
