@@ -1,50 +1,49 @@
-import { useState, useCallback } from 'react';
-import type { ToastType } from '../components/Toast';
-
-interface ToastState {
-  message: string;
-  type: ToastType;
-  id: number;
-}
+import { useCallback } from 'react';
+import { toast } from 'react-toastify';
 
 export const useToast = () => {
-  const [toasts, setToasts] = useState<ToastState[]>([]);
-
-  const showToast = useCallback((message: string, type: ToastType = 'info') => {
-    const id = Date.now();
-    setToasts((prev) => [...prev, { message, type, id }]);
+  const showSuccess = useCallback((message: string) => {
+    toast.success(message, {
+      position: 'top-right',
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+    });
   }, []);
 
-  const showSuccess = useCallback(
-    (message: string) => {
-      showToast(message, 'success');
-    },
-    [showToast],
-  );
+  const showError = useCallback((message: string) => {
+    toast.error(message, {
+      position: 'top-right',
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+    });
+  }, []);
 
-  const showError = useCallback(
-    (message: string) => {
-      showToast(message, 'error');
-    },
-    [showToast],
-  );
+  const showWarning = useCallback((message: string) => {
+    toast.warning(message, {
+      position: 'top-right',
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+    });
+  }, []);
 
-  const showWarning = useCallback(
-    (message: string) => {
-      showToast(message, 'warning');
-    },
-    [showToast],
-  );
-
-  const showInfo = useCallback(
-    (message: string) => {
-      showToast(message, 'info');
-    },
-    [showToast],
-  );
-
-  const hideToast = useCallback((id: number) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  const showInfo = useCallback((message: string) => {
+    toast.info(message, {
+      position: 'top-right',
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+    });
   }, []);
 
   // Función helper para extraer mensaje de error del backend
@@ -84,13 +83,10 @@ export const useToast = () => {
   );
 
   return {
-    toasts,
-    showToast,
     showSuccess,
     showError,
     showWarning,
     showInfo,
     showErrorFromResponse,
-    hideToast,
   };
 };

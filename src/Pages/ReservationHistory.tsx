@@ -7,7 +7,6 @@ import {
 } from '../services/reservationService'
 import { useAuth } from '../contexts/useAuth'
 import LoadingScreen from '../components/LoadingScreen'
-import Toast from '../components/Toast'
 import { useToast } from '../hooks/useToast'
 import { Link } from 'react-router-dom'
 import {
@@ -229,7 +228,7 @@ function ReservationCard({ reservation, onViewDetails }: ReservationCardProps) {
 // Componente principal
 function ReservationHistory() {
   const { user } = useAuth()
-  const { toasts, showErrorFromResponse, hideToast } = useToast()
+  const { showErrorFromResponse } = useToast()
   const [analytics, setAnalytics] = useState<ReservationAnalytics | null>(null)
   const [pastReservations, setPastReservations] = useState<Reservation[]>([])
   const [loading, setLoading] = useState(true)
@@ -639,13 +638,6 @@ function ReservationHistory() {
             </div>
           )}
         </div>
-      </div>
-
-      {/* Toast notifications */}
-      <div className="fixed z-50 space-y-2 top-4 right-4">
-        {toasts.map((toast) => (
-          <Toast key={toast.id} {...toast} onClose={() => hideToast(toast.id)} />
-        ))}
       </div>
     </div>
   )

@@ -3,7 +3,6 @@ import { tableService, type Table, type TableStatus, type TableStats } from '../
 import { useAuth } from '../contexts/useAuth'
 import { isOwner } from '../guards/getDefaultRoute'
 import LoadingScreen from '../components/LoadingScreen'
-import Toast from '../components/Toast'
 import { useToast } from '../hooks/useToast'
 import { IoAddCircleOutline, IoRefresh, IoSearchOutline } from 'react-icons/io5'
 
@@ -567,7 +566,7 @@ function StatsCard({ stats, loading }: StatsCardProps) {
 // Componente principal
 function Tables() {
   const { user } = useAuth()
-  const { toasts, showSuccess, showErrorFromResponse, hideToast } = useToast()
+  const { showSuccess, showErrorFromResponse } = useToast()
   const [tables, setTables] = useState<Table[]>([])
   const [stats, setStats] = useState<TableStats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -886,13 +885,6 @@ function Tables() {
           tableCode={tableToDelete?.tableCode || ''}
           isDeleting={isDeleting}
         />
-      </div>
-
-      {/* Toast notifications */}
-      <div className="fixed z-50 space-y-2 top-4 right-4">
-        {toasts.map((toast) => (
-          <Toast key={toast.id} {...toast} onClose={() => hideToast(toast.id)} />
-        ))}
       </div>
     </div>
   )

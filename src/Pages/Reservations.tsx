@@ -4,7 +4,6 @@ import { tableService, type Table } from '../services/tableService'
 import { useAuth } from '../contexts/useAuth'
 import LoadingScreen from '../components/LoadingScreen'
 import GanttModal from '../components/GanttModal'
-import Toast from '../components/Toast'
 import { useToast } from '../hooks/useToast'
 import { Link } from 'react-router-dom'
 import { IoAddCircleOutline, IoRefresh, IoSearchOutline, IoCalendarOutline } from 'react-icons/io5'
@@ -841,7 +840,7 @@ function ConfirmActionModal({
 // Componente principal
 function Reservations() {
   const { user } = useAuth()
-  const { toasts, showSuccess, showWarning, showErrorFromResponse, hideToast } = useToast()
+  const { showSuccess, showWarning, showErrorFromResponse } = useToast()
   const [reservations, setReservations] = useState<Reservation[]>([])
   const [availableTables, setAvailableTables] = useState<Table[]>([])
   const [loading, setLoading] = useState(true)
@@ -1326,13 +1325,6 @@ function Reservations() {
           onClose={() => setShowGanttModal(false)}
           businessId={businessId || ''}
         />
-      </div>
-
-      {/* Toast notifications */}
-      <div className="fixed z-50 space-y-2 top-4 right-4">
-        {toasts.map((toast) => (
-          <Toast key={toast.id} {...toast} onClose={() => hideToast(toast.id)} />
-        ))}
       </div>
     </div>
   )
