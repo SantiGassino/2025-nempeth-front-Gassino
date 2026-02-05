@@ -19,6 +19,7 @@ import Ranking from './Pages/Ranking'
 import InternalRanking from './Pages/InternalRanking'
 import Tables from './Pages/Tables'
 import Reservations from './Pages/Reservations'
+import ReservationHistory from './Pages/ReservationHistory'
 import Layout from './components/Layout'
 import UnauthenticatedGuard from './guards/UnauthenticatedGuard'
 import OwnerGuard from './guards/OwnerGuard'
@@ -145,6 +146,17 @@ function AppRoutes() {
           <OwnerOrActiveEmployeeGuard>
             <Layout>
               <Reservations />
+            </Layout>
+          </OwnerOrActiveEmployeeGuard>
+        }
+      />
+
+      <Route
+        path="/reservations/history"
+        element={
+          <OwnerOrActiveEmployeeGuard>
+            <Layout>
+              <ReservationHistory />
             </Layout>
           </OwnerOrActiveEmployeeGuard>
         }

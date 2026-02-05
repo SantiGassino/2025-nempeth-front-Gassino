@@ -6,6 +6,7 @@ import LoadingScreen from '../components/LoadingScreen'
 import GanttModal from '../components/GanttModal'
 import Toast from '../components/Toast'
 import { useToast } from '../hooks/useToast'
+import { Link } from 'react-router-dom'
 import { IoAddCircleOutline, IoRefresh, IoSearchOutline, IoCalendarOutline } from 'react-icons/io5'
 
 // Iconos SVG
@@ -423,7 +424,7 @@ function ReservationModal({
                 value={customerContact}
                 onChange={(e) => setCustomerContact(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f74116] focus:border-transparent"
-                placeholder="+54 9 11 1234-5678"
+                placeholder="Mail o Telefono"
                 required
                 disabled={isProcessing}
               />
@@ -840,13 +841,13 @@ function Reservations() {
 
   const businessId = user?.businessId
 
-  // Cargar reservas
+  // Cargar reservas (ahora solo próximas)
   const loadReservations = useCallback(async () => {
     if (!businessId) return
 
     try {
       setLoading(true)
-      const data = await reservationService.getReservations(businessId)
+      const data = await reservationService.getUpcomingReservations(businessId)
       setReservations(data)
     } catch (err) {
       showErrorFromResponse(err, 'Error al cargar las reservas')
@@ -1097,8 +1098,16 @@ function Reservations() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
-                <span className="hidden sm:inline">Gantt</span>
+                <span className="hidden sm:inline">Ocupación</span>
               </button>
+              <Link
+                to="/reservations/history"
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-[#f74116] text-[#f74116] rounded-lg hover:bg-[#fff5f3] transition-colors font-semibold"
+                title="Ver historial y análisis"
+              >
+                <IoCalendarOutline className="w-5 h-5" />
+                <span className="hidden sm:inline">Historial</span>
+              </Link>
               <button
                 onClick={() => {
                   setEditingReservation(null)
@@ -1116,7 +1125,7 @@ function Reservations() {
           <div className="p-6 mb-6 border border-gray-200 shadow-sm bg-gradient-to-r from-white to-gray-50 rounded-xl">
             <h2 className="flex items-center gap-2 mb-4 text-lg font-bold text-gray-900">
               <IoCalendarOutline className="w-5 h-5 text-[#f74116]" />
-              Estadísticas de Reservas
+              Estadísticas - Reservas Próximas
             </h2>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-6">
               <div className="p-4 bg-white border border-gray-200 rounded-lg">

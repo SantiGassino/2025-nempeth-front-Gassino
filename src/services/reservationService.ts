@@ -72,6 +72,67 @@ export interface GanttTableData {
   reservations: GanttReservation[];
 }
 
+// Analytics - Resumen general
+export interface AnalyticsSummary {
+  totalReservations: number;
+  pendingReservations: number;
+  completedReservations: number;
+  cancelledReservations: number;
+  noShowReservations: number;
+  inProgressReservations: number;
+  completionRate: number;
+  noShowRate: number;
+  cancellationRate: number;
+}
+
+// Analytics - Utilización de mesas
+export interface TableUtilization {
+  tableCode: string;
+  totalReservations: number;
+  totalHoursReserved: number;
+  completedReservations: number;
+  noShows: number;
+  utilizationRate: number;
+}
+
+// Analytics - Confiabilidad de clientes
+export interface ClientReliability {
+  customerName: string;
+  customerContact: string;
+  totalReservations: number;
+  completedReservations: number;
+  noShows: number;
+  cancellations: number;
+  reliabilityScore: number;
+}
+
+// Analytics - Análisis por franja horaria
+export interface TimeSlotAnalysis {
+  hourOfDay: number;
+  totalReservations: number;
+  noShows: number;
+  noShowRate: number;
+  avgPartySize: number;
+}
+
+// Analytics - Desperdicio de capacidad
+export interface CapacityWaste {
+  tableCode: string;
+  tableCapacity: number;
+  reservationCount: number;
+  avgPartySize: number;
+  wastePercentage: number;
+}
+
+// Analytics - Respuesta completa
+export interface ReservationAnalytics {
+  summary: AnalyticsSummary;
+  tableUtilization: TableUtilization[];
+  clientReliability: ClientReliability[];
+  timeSlotAnalysis: TimeSlotAnalysis[];
+  capacityWaste: CapacityWaste[];
+}
+
 export const reservationService = {
   /**
    * Obtener todas las reservas del negocio
@@ -331,6 +392,79 @@ export const reservationService = {
       return response.data;
     } catch (error) {
       console.error('Error al obtener datos de Gantt:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Obtener reservas futuras (upcoming)
+   * Permisos: OWNER y EMPLOYEE
+   *
+   * Retorna todas las reservas desde hoy en adelante.
+   * - Ordenadas de más cercanas a más lejanas
+   * - Incluye todos los estados
+   *
+   * @param businessId - ID del negocio
+   */
+  getUpcomingReservations: async (
+    businessId: string,
+  ): Promise<Reservation[]> => {
+    try {
+      const response = await api.get(
+        `/businesses/${businessId}/reservations/upcoming`,
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener reservas futuras:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Obtener reservas pasadas (past)
+   * Permisos: OWNER y EMPLOYEE
+   *
+   * Retorna todas las reservas anteriores a hoy.
+   * - Ordenadas de más recientes a más antiguas
+   * - Incluye todos los estados
+   *
+   * @param businessId - ID del negocio
+   */
+  getPastReservations: async (businessId: string): Promise<Reservation[]> => {
+    try {
+      const response = await api.get(
+        `/businesses/${businessId}/reservations/past`,
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener reservas pasadas:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Obtener análisis de reservas (analytics)
+   * Permisos: OWNER y EMPLOYEE
+   *
+   * Retorna métricas completas sobre todas las reservas.
+   * - Resumen general
+   * - Utilización por mesa
+   * - Confiabilidad de clientes (top 20)
+   * - Análisis por franja horaria
+   * - Desperdicio de capacidad (>20%)
+   *
+   * @param businessId - ID del negocio
+   */
+  getReservationAnalytics: async (
+    businessId: string,
+  ): Promise<ReservationAnalytics> => {
+    try {
+      const response = await api.get(
+        `/businesses/${businessId}/reservations/analytics`,
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener analytics de reservas:', error);
       throw error;
     }
   },
