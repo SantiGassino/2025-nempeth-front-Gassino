@@ -89,6 +89,42 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
     return { left: `${left}%`, width: `${width}%` };
   };
 
+  // Detectar solapamientos y asignar carriles (lanes) a las reservas
+  const calculateLanes = (reservations: GanttReservation[]) => {
+    // Ordenar reservas por hora de inicio
+    const sorted = [...reservations].sort(
+      (a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime()
+    );
+
+    const lanes: Array<{ reservation: GanttReservation; lane: number }> = [];
+    const laneEndTimes: number[] = [];
+
+    sorted.forEach((reservation) => {
+      const startTime = new Date(reservation.startDateTime).getTime();
+      const endTime = new Date(reservation.endDateTime).getTime();
+
+      // Buscar un carril disponible (donde la reserva anterior ya haya terminado)
+      let assignedLane = -1;
+      for (let i = 0; i < laneEndTimes.length; i++) {
+        if (laneEndTimes[i] <= startTime) {
+          assignedLane = i;
+          laneEndTimes[i] = endTime;
+          break;
+        }
+      }
+
+      // Si no hay carril disponible, crear uno nuevo
+      if (assignedLane === -1) {
+        assignedLane = laneEndTimes.length;
+        laneEndTimes.push(endTime);
+      }
+
+      lanes.push({ reservation, lane: assignedLane });
+    });
+
+    return { lanes, totalLanes: laneEndTimes.length };
+  };
+
   // Calcular posición y ancho del buffer de 45 minutos antes de la reserva
   const calculateBufferPosition = (reservation: GanttReservation) => {
     const startOfDay = new Date(currentDate);
@@ -146,17 +182,17 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-[95vw] h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="p-6 border-b border-gray-200 flex-shrink-0">
-          <div className="flex justify-between items-center mb-4">
+        <div className="flex-shrink-0 p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold text-gray-800">
               📊 Diagrama de Gantt - Ocupación de Mesas
             </h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-gray-400 transition-colors hover:text-gray-600"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -169,7 +205,7 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
             <button
               onClick={goToPreviousDay}
               disabled={isLoading}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors disabled:opacity-50"
+              className="px-4 py-2 font-medium text-gray-700 transition-colors bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50"
             >
               ← Día Anterior
             </button>
@@ -203,7 +239,7 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
             <button
               onClick={goToNextDay}
               disabled={isLoading}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors disabled:opacity-50"
+              className="px-4 py-2 font-medium text-gray-700 transition-colors bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50"
             >
               Día Siguiente →
             </button>
@@ -211,11 +247,11 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-hidden p-6">
+        <div className="flex-1 p-6 overflow-hidden">
           {error ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <p className="text-red-600 text-lg mb-4">❌ {error}</p>
+                <p className="mb-4 text-lg text-red-600">❌ {error}</p>
                 <button
                   onClick={loadGanttData}
                   className="px-4 py-2 bg-[#f74116] hover:bg-[#d63813] text-white rounded-lg font-medium transition-colors"
@@ -226,29 +262,29 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
             </div>
           ) : ganttData.length === 0 && !isLoading ? (
             <div className="flex items-center justify-center h-full">
-              <p className="text-gray-500 text-lg">No hay mesas disponibles</p>
+              <p className="text-lg text-gray-500">No hay mesas disponibles</p>
             </div>
           ) : (
-            <div className="h-full overflow-auto relative">
+            <div className="relative h-full overflow-auto">
               {/* Spinner de carga inline */}
               {isLoading && (
-                <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-20">
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-white bg-opacity-75">
                   <div className="flex flex-col items-center gap-3">
                     <div className="w-12 h-12 border-4 border-gray-200 border-t-[#f74116] rounded-full animate-spin"></div>
-                    <p className="text-gray-600 font-medium">Cargando ocupación...</p>
+                    <p className="font-medium text-gray-600">Cargando ocupación...</p>
                   </div>
                 </div>
               )}
               {/* Gantt Chart */}
               <div>
                 {/* Timeline header - Cada hora */}
-                <div className="flex mb-2 sticky top-0 bg-white z-10 border-b-2 border-gray-300">
-                  <div className="w-24 flex-shrink-0"></div>
-                  <div className="flex-1 flex">
+                <div className="sticky top-0 z-10 flex mb-2 bg-white border-b-2 border-gray-300">
+                  <div className="flex-shrink-0 w-24"></div>
+                  <div className="flex flex-1">
                     {Array.from({ length: 24 }, (_, hour) => (
                       <div
                         key={hour}
-                        className="flex-1 text-center text-xs font-semibold text-gray-600 pb-2 border-l border-gray-300"
+                        className="flex-1 pb-2 text-xs font-semibold text-center text-gray-600 border-l border-gray-300"
                       >
                         {String(hour).padStart(2, '0')}:00
                       </div>
@@ -257,75 +293,93 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
                 </div>
 
                 {/* Mesas y sus reservas */}
-                {ganttData.map((table) => (
-                  <div key={table.tableId} className="flex items-center mb-1 hover:bg-gray-50">
-                    {/* Columna de mesa */}
-                    <div className="w-24 flex-shrink-0 pr-2 py-2">
-                      <div className="font-semibold text-gray-800 text-sm">{table.tableCode}</div>
-                      <div className="text-[10px] text-gray-500">Cap: {table.capacity}p</div>
-                    </div>
+                {ganttData.map((table) => {
+                  // Calcular carriles para esta mesa
+                  const { lanes, totalLanes } = calculateLanes(table.reservations);
+                  // Altura dinámica: mínimo 40px, o 32px por carril si hay solapamientos
+                  const rowHeight = totalLanes > 1 ? Math.max(40, totalLanes * 32) : 40;
 
-                    {/* Timeline con grid de 15 minutos */}
-                    <div className="flex-1 relative h-10 bg-gray-50 border border-gray-200">
-                      {/* Grid lines cada hora */}
-                      {Array.from({ length: 24 }, (_, i) => (
-                        <div
-                          key={i}
-                          className="absolute top-0 bottom-0 border-l border-gray-300"
-                          style={{ left: `${(i / 24) * 100}%` }}
-                        />
-                      ))}
+                  return (
+                    <div key={table.tableId} className="flex items-center mb-1 hover:bg-gray-50">
+                      {/* Columna de mesa */}
+                      <div className="flex-shrink-0 w-24 py-2 pr-2">
+                        <div className="text-sm font-semibold text-gray-800">{table.tableCode}</div>
+                        <div className="text-[10px] text-gray-500">Cap: {table.capacity}p</div>
+                      </div>
 
-                      {/* Reservas */}
-                      {table.reservations.map((reservation) => {
-                        const position = calculateReservationPosition(reservation);
-                        const bufferPosition = calculateBufferPosition(reservation);
-                        const colors = STATUS_COLORS[reservation.status];
+                      {/* Timeline con grid de 15 minutos */}
+                      <div 
+                        className="relative flex-1 border border-gray-200 bg-gray-50"
+                        style={{ height: `${rowHeight}px` }}
+                      >
+                        {/* Grid lines cada hora */}
+                        {Array.from({ length: 24 }, (_, i) => (
+                          <div
+                            key={i}
+                            className="absolute top-0 bottom-0 border-l border-gray-300"
+                            style={{ left: `${(i / 24) * 100}%` }}
+                          />
+                        ))}
 
-                        return (
-                          <div key={reservation.reservationId}>
-                            {/* Buffer de 45 minutos (preparación) */}
-                            {bufferPosition && (
+                        {/* Reservas con carriles */}
+                        {lanes.map(({ reservation, lane }) => {
+                          const position = calculateReservationPosition(reservation);
+                          const bufferPosition = calculateBufferPosition(reservation);
+                          const colors = STATUS_COLORS[reservation.status];
+
+                          // Calcular altura y posición vertical del carril
+                          const laneHeight = Math.floor(rowHeight / totalLanes);
+                          const topOffset = lane * laneHeight;
+
+                          return (
+                            <div key={reservation.reservationId}>
+                              {/* Buffer de 45 minutos (preparación) */}
+                              {bufferPosition && (
+                                <div
+                                  className="absolute bg-yellow-100 border-l-2 border-yellow-400 opacity-70"
+                                  style={{
+                                    left: bufferPosition.left,
+                                    width: bufferPosition.width,
+                                    top: `${topOffset + 2}px`,
+                                    height: `${laneHeight - 4}px`,
+                                    minWidth: '10px',
+                                    backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(251, 191, 36, 0.3) 4px, rgba(251, 191, 36, 0.3) 8px)',
+                                  }}
+                                  title="Tiempo de preparación (45 min) - Mesa bloqueada"
+                                />
+                              )}
+                              
+                              {/* Reserva principal */}
                               <div
-                                className="absolute top-0.5 bottom-0.5 bg-yellow-100 border-l-2 border-yellow-400 opacity-70"
+                                className={`absolute ${colors.bg} ${colors.border} border-l-4 rounded-r px-1.5 py-0.5 overflow-hidden cursor-pointer hover:shadow-lg transition-shadow z-10`}
                                 style={{
-                                  left: bufferPosition.left,
-                                  width: bufferPosition.width,
-                                  minWidth: '10px',
-                                  backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(251, 191, 36, 0.3) 4px, rgba(251, 191, 36, 0.3) 8px)',
+                                  left: position.left,
+                                  width: position.width,
+                                  top: `${topOffset + 2}px`,
+                                  height: `${laneHeight - 4}px`,
+                                  minWidth: '15px',
                                 }}
-                                title="Buffer de preparación (45 min) - Mesa bloqueada"
-                              />
-                            )}
-                            
-                            {/* Reserva principal */}
-                            <div
-                              className={`absolute top-0.5 bottom-0.5 ${colors.bg} ${colors.border} border-l-4 rounded-r px-1.5 py-0.5 overflow-hidden cursor-pointer hover:shadow-lg transition-shadow z-10`}
-                              style={{
-                                left: position.left,
-                                width: position.width,
-                                minWidth: '15px',
-                              }}
-                              title={`${reservation.customerName} - ${reservation.partySize}p\n${new Date(reservation.startDateTime).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - ${new Date(reservation.endDateTime).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}\nEstado: ${reservation.status}`}
-                            >
-                              <div className={`text-[10px] font-semibold ${colors.text} truncate`}>
-                                {reservation.customerName}
-                              </div>
-                              <div className={`text-[9px] ${colors.text} truncate`}>
-                                {reservation.partySize}p
+                                title={`${reservation.customerName} - ${reservation.partySize}p\n${new Date(reservation.startDateTime).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - ${new Date(reservation.endDateTime).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}\nEstado: ${reservation.status}`}
+                              >
+                                <div className={`text-[10px] font-semibold ${colors.text} truncate`}>
+                                  {reservation.customerName}
+                                </div>
+                                <div className={`text-[9px] ${colors.text} truncate`}>
+                                  {reservation.partySize}p
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Leyenda */}
-              <div className="mt-6 pt-4 border-t border-gray-200">
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">Leyenda:</h3>
+              <div className="pt-4 mt-6 border-t border-gray-200">
+                <h3 className="mb-2 text-sm font-semibold text-gray-700">Leyenda:</h3>
                 <div className="flex flex-wrap gap-4">
                   {/* Buffer de preparación */}
                   <div className="flex items-center gap-2">
@@ -335,7 +389,7 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
                         backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(251, 191, 36, 0.3) 4px, rgba(251, 191, 36, 0.3) 8px)',
                       }}
                     />
-                    <span className="text-xs text-gray-600">Buffer (45 min antes)</span>
+                    <span className="text-xs text-gray-600">Tiempo de preparación (45 min antes)</span>
                   </div>
                   
                   {/* Estados de reserva */}
@@ -352,6 +406,87 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Lista de reservas */}
+              <div className="pt-4 mt-6 border-t border-gray-200">
+                <h3 className="mb-3 text-sm font-semibold text-gray-700">Reservas del día:</h3>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  {ganttData
+                    .flatMap(table => 
+                      table.reservations.map(reservation => ({
+                        ...reservation,
+                        tableCode: table.tableCode
+                      }))
+                    )
+                    .sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime())
+                    .map((reservation, index) => {
+                      const colors = STATUS_COLORS[reservation.status];
+                      const startTime = new Date(reservation.startDateTime).toLocaleTimeString('es-AR', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      });
+                      const endTime = new Date(reservation.endDateTime).toLocaleTimeString('es-AR', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      });
+
+                      return (
+                        <div 
+                          key={`${reservation.reservationId}-${index}`}
+                          className={`p-3 ${colors.bg} border ${colors.border} border-l-4 rounded-r-lg hover:shadow-md transition-shadow`}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex-1 min-w-0">
+                              <h4 className={`text-sm font-bold ${colors.text} truncate`}>
+                                {reservation.customerName}
+                              </h4>
+                            </div>
+                            <span className={`ml-2 px-2 py-0.5 text-[10px] font-semibold ${colors.bg} ${colors.text} border ${colors.border} rounded-full flex-shrink-0`}>
+                              {reservation.status === 'PENDING' && 'Pendiente'}
+                              {reservation.status === 'IN_PROGRESS' && 'En Curso'}
+                              {reservation.status === 'COMPLETED' && 'Completada'}
+                              {reservation.status === 'CANCELLED' && 'Cancelada'}
+                              {reservation.status === 'NO_SHOW' && 'Ausente'}
+                            </span>
+                          </div>
+                          
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1.5 text-xs text-gray-700">
+                              <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span className="font-medium">{startTime}</span>
+                              <span className="text-gray-400">-</span>
+                              <span className="font-medium">{endTime}</span>
+                            </div>
+                            
+                            <div className="flex items-center justify-between text-xs">
+                              <div className="flex items-center gap-1.5 text-gray-700">
+                                <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                                <span className="font-medium">{reservation.partySize} {reservation.partySize === 1 ? 'persona' : 'personas'}</span>
+                              </div>
+                              
+                              <div className="flex items-center gap-1.5">
+                                <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                                <span className="font-medium text-gray-700">{reservation.tableCode}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+                
+                {ganttData.every(table => table.reservations.length === 0) && (
+                  <p className="py-8 text-sm text-center text-gray-500">
+                    No hay reservas para este día
+                  </p>
+                )}
               </div>
             </div>
           )}

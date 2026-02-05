@@ -822,7 +822,7 @@ function Reservations() {
   // Filtros
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState<ReservationStatus | 'ALL'>('ALL')
-  const [sortOrder, setSortOrder] = useState<'reciente' | 'antiguo'>('reciente')
+  const [sortOrder, setSortOrder] = useState<'proximos' | 'lejanos'>('proximos')
 
   // Modales
   const [showReservationModal, setShowReservationModal] = useState(false)
@@ -887,11 +887,16 @@ function Reservations() {
     })
 
     // Ordenar por fecha de inicio
-    filtered.sort((a, b) => {
-      const dateA = new Date(a.startDateTime).getTime()
-      const dateB = new Date(b.startDateTime).getTime()
-      return sortOrder === 'reciente' ? dateB - dateA : dateA - dateB
-    })
+    // Si es 'proximos', mantener el orden original del backend (más cercano primero)
+    // Si es 'lejanos', invertir el orden
+    if (sortOrder === 'lejanos') {
+      filtered.sort((a, b) => {
+        const dateA = new Date(a.startDateTime).getTime()
+        const dateB = new Date(b.startDateTime).getTime()
+        return dateB - dateA
+      })
+    }
+    // Si es 'proximos', no hace falta ordenar, ya viene en orden del backend
 
     return filtered
   }, [reservations, searchQuery, filterStatus, sortOrder])
@@ -1190,11 +1195,11 @@ function Reservations() {
               <div>
                 <select
                   value={sortOrder}
-                  onChange={(e) => setSortOrder(e.target.value as 'reciente' | 'antiguo')}
+                  onChange={(e) => setSortOrder(e.target.value as 'proximos' | 'lejanos')}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f74116] focus:border-transparent"
                 >
-                  <option value="reciente">Más recientes</option>
-                  <option value="antiguo">Más antiguos</option>
+                  <option value="proximos">Más próximos</option>
+                  <option value="lejanos">Más lejanos</option>
                 </select>
               </div>
             </div>
