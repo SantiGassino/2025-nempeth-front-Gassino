@@ -3,6 +3,8 @@ import { tableService, type Table, type TableStatus, type TableStats } from '../
 import { useAuth } from '../contexts/useAuth'
 import { isOwner } from '../guards/getDefaultRoute'
 import LoadingScreen from '../components/LoadingScreen'
+import Toast from '../components/Toast'
+import { useToast } from '../hooks/useToast'
 import { IoAddCircleOutline, IoRefresh, IoSearchOutline } from 'react-icons/io5'
 
 // Iconos SVG
@@ -54,7 +56,7 @@ function TableCard({ table, onEdit, onDelete, onChangeStatus, onChangeCapacity, 
   const statusColor = getStatusColor(table.status)
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+    <div className="overflow-hidden transition-all duration-200 bg-white border border-gray-200 shadow-sm rounded-xl hover:shadow-md">
       {/* Header con código y estado */}
       <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
         <div className="flex items-center justify-between">
@@ -86,7 +88,7 @@ function TableCard({ table, onEdit, onDelete, onChangeStatus, onChangeCapacity, 
       </div>
 
       {/* Acciones */}
-      <div className="p-4 bg-gray-50 border-t border-gray-100">
+      <div className="p-4 border-t border-gray-100 bg-gray-50">
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => onChangeStatus(table)}
@@ -121,7 +123,7 @@ function TableCard({ table, onEdit, onDelete, onChangeStatus, onChangeCapacity, 
           )}
         </div>
         {table.status !== 'FREE' && (
-          <p className="mt-2 text-xs text-gray-500 text-center">
+          <p className="mt-2 text-xs text-center text-gray-500">
             * Solo se puede {isOwner ? 'editar, eliminar o cambiar capacidad' : 'cambiar capacidad'} de mesas en estado libre
           </p>
         )}
@@ -169,14 +171,14 @@ function TableModal({ isOpen, onClose, onSave, editingTable, isProcessing }: Tab
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <div className="w-full max-w-md overflow-hidden bg-white shadow-2xl rounded-2xl">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-[#f74116]/5 to-white">
           <h3 className="text-xl font-bold text-gray-900">
             {editingTable ? 'Editar Mesa' : 'Nueva Mesa'}
           </h3>
           <button
-            className="text-gray-500 hover:text-gray-700 text-2xl"
+            className="text-2xl text-gray-500 hover:text-gray-700"
             onClick={onClose}
             disabled={isProcessing}
             type="button"
@@ -188,7 +190,7 @@ function TableModal({ isOpen, onClose, onSave, editingTable, isProcessing }: Tab
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block mb-2 text-sm font-semibold text-gray-700">
               Código de Mesa *
             </label>
             <input
@@ -204,7 +206,7 @@ function TableModal({ isOpen, onClose, onSave, editingTable, isProcessing }: Tab
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block mb-2 text-sm font-semibold text-gray-700">
               Capacidad (1-100) *
             </label>
             <input
@@ -221,7 +223,7 @@ function TableModal({ isOpen, onClose, onSave, editingTable, isProcessing }: Tab
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block mb-2 text-sm font-semibold text-gray-700">
               Sector *
             </label>
             <input
@@ -242,7 +244,7 @@ function TableModal({ isOpen, onClose, onSave, editingTable, isProcessing }: Tab
               type="button"
               onClick={onClose}
               disabled={isProcessing}
-              className="flex-1 px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors bg-gray-200 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancelar
             </button>
@@ -285,11 +287,11 @@ function ChangeStatusModal({ isOpen, onClose, onSave, currentStatus, isProcessin
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <div className="w-full max-w-md overflow-hidden bg-white shadow-2xl rounded-2xl">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-[#f74116]/5 to-white">
           <h3 className="text-xl font-bold text-gray-900">Cambiar Estado</h3>
           <button
-            className="text-gray-500 hover:text-gray-700 text-2xl"
+            className="text-2xl text-gray-500 hover:text-gray-700"
             onClick={onClose}
             disabled={isProcessing}
             type="button"
@@ -300,11 +302,11 @@ function ChangeStatusModal({ isOpen, onClose, onSave, currentStatus, isProcessin
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3">
+            <label className="block mb-3 text-sm font-semibold text-gray-700">
               Seleccionar nuevo estado
             </label>
             <div className="space-y-2">
-              <label className="flex items-center p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+              <label className="flex items-center p-3 transition-colors border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
                 <input
                   type="radio"
                   name="status"
@@ -319,7 +321,7 @@ function ChangeStatusModal({ isOpen, onClose, onSave, currentStatus, isProcessin
                 </span>
               </label>
 
-              <label className="flex items-center p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+              <label className="flex items-center p-3 transition-colors border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
                 <input
                   type="radio"
                   name="status"
@@ -334,9 +336,9 @@ function ChangeStatusModal({ isOpen, onClose, onSave, currentStatus, isProcessin
                 </span>
               </label>
             </div>
-            <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="p-3 mt-3 border border-yellow-200 rounded-lg bg-yellow-50">
               <p className="text-xs text-yellow-800">
-                ⚠️ <strong>Nota:</strong> El estado RESERVED se asigna automáticamente 45 minutos antes de una reserva.
+                ⚠️ <strong>Nota:</strong> El estado RESERVADO se asigna automáticamente 45 minutos antes de una reserva.
               </p>
             </div>
           </div>
@@ -346,7 +348,7 @@ function ChangeStatusModal({ isOpen, onClose, onSave, currentStatus, isProcessin
               type="button"
               onClick={onClose}
               disabled={isProcessing}
-              className="flex-1 px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors bg-gray-200 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancelar
             </button>
@@ -389,11 +391,11 @@ function ChangeCapacityModal({ isOpen, onClose, onSave, currentCapacity, isProce
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <div className="w-full max-w-md overflow-hidden bg-white shadow-2xl rounded-2xl">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-[#f74116]/5 to-white">
           <h3 className="text-xl font-bold text-gray-900">Cambiar Capacidad</h3>
           <button
-            className="text-gray-500 hover:text-gray-700 text-2xl"
+            className="text-2xl text-gray-500 hover:text-gray-700"
             onClick={onClose}
             disabled={isProcessing}
             type="button"
@@ -404,7 +406,7 @@ function ChangeCapacityModal({ isOpen, onClose, onSave, currentCapacity, isProce
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block mb-2 text-sm font-semibold text-gray-700">
               Nueva capacidad (1-100) *
             </label>
             <input
@@ -420,9 +422,9 @@ function ChangeCapacityModal({ isOpen, onClose, onSave, currentCapacity, isProce
             <p className="mt-2 text-sm text-gray-600">
               Capacidad actual: <strong>{currentCapacity}</strong> {currentCapacity === 1 ? 'persona' : 'personas'}
             </p>
-            <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="p-3 mt-3 border border-yellow-200 rounded-lg bg-yellow-50">
               <p className="text-xs text-yellow-800">
-                ⚠️ Solo se puede cambiar la capacidad de mesas en estado libre (FREE).
+                ⚠️ Solo se puede cambiar la capacidad de mesas en estado LIBRE.
               </p>
             </div>
           </div>
@@ -432,7 +434,7 @@ function ChangeCapacityModal({ isOpen, onClose, onSave, currentCapacity, isProce
               type="button"
               onClick={onClose}
               disabled={isProcessing}
-              className="flex-1 px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors bg-gray-200 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancelar
             </button>
@@ -468,7 +470,7 @@ function ConfirmDeleteModal({ isOpen, onClose, onConfirm, tableCode, isDeleting 
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
           <h3 className="text-lg font-semibold text-gray-800">Confirmar eliminación</h3>
           <button
-            className="text-gray-500 hover:text-gray-700 text-2xl"
+            className="text-2xl text-gray-500 hover:text-gray-700"
             onClick={onClose}
             disabled={isDeleting}
             type="button"
@@ -488,7 +490,7 @@ function ConfirmDeleteModal({ isOpen, onClose, onConfirm, tableCode, isDeleting 
         <div className="flex items-center justify-center gap-3 px-6 py-4 border-t border-gray-200">
           <button
             type="button"
-            className="px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-semibold text-gray-700 transition-colors bg-gray-200 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={onClose}
             disabled={isDeleting}
           >
@@ -496,7 +498,7 @@ function ConfirmDeleteModal({ isOpen, onClose, onConfirm, tableCode, isDeleting 
           </button>
           <button
             type="button"
-            className="px-5 py-2 text-sm font-semibold text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-5 py-2 text-sm font-semibold text-white transition-colors bg-red-500 rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={onConfirm}
             disabled={isDeleting}
           >
@@ -517,9 +519,9 @@ interface StatsCardProps {
 function StatsCard({ stats, loading }: StatsCardProps) {
   if (loading || !stats) {
     return (
-      <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6 animate-pulse">
-        <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="p-6 mb-6 bg-white border border-gray-200 rounded-xl animate-pulse">
+        <div className="w-1/4 h-4 mb-4 bg-gray-200 rounded"></div>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="h-20 bg-gray-200 rounded"></div>
           ))}
@@ -529,28 +531,28 @@ function StatsCard({ stats, loading }: StatsCardProps) {
   }
 
   return (
-    <div className="bg-gradient-to-r from-white to-gray-50 border border-gray-200 rounded-xl p-6 mb-6 shadow-sm">
-      <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+    <div className="p-6 mb-6 border border-gray-200 shadow-sm bg-gradient-to-r from-white to-gray-50 rounded-xl">
+      <h2 className="flex items-center gap-2 mb-4 text-lg font-bold text-gray-900">
         <svg className="w-5 h-5 text-[#f74116]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
         Estadísticas de Ocupación
       </h2>
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
         <div className="p-4 bg-white border border-gray-200 rounded-lg">
-          <p className="text-sm text-gray-600 mb-1">Total</p>
+          <p className="mb-1 text-sm text-gray-600">Total</p>
           <p className="text-2xl font-bold text-gray-900">{stats.totalTables}</p>
         </div>
-        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-sm text-green-700 mb-1">Libres</p>
+        <div className="p-4 border border-green-200 rounded-lg bg-green-50">
+          <p className="mb-1 text-sm text-green-700">Libres</p>
           <p className="text-2xl font-bold text-green-700">{stats.freeTables}</p>
         </div>
-        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-sm text-yellow-700 mb-1">Reservadas</p>
+        <div className="p-4 border border-yellow-200 rounded-lg bg-yellow-50">
+          <p className="mb-1 text-sm text-yellow-700">Reservadas</p>
           <p className="text-2xl font-bold text-yellow-700">{stats.reservedTables}</p>
         </div>
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-700 mb-1">Ocupadas</p>
+        <div className="p-4 border border-red-200 rounded-lg bg-red-50">
+          <p className="mb-1 text-sm text-red-700">Ocupadas</p>
           <p className="text-2xl font-bold text-red-700">{stats.occupiedTables}</p>
         </div>
         <div className="p-4 bg-[#f74116]/10 border border-[#f74116]/20 rounded-lg">
@@ -565,10 +567,10 @@ function StatsCard({ stats, loading }: StatsCardProps) {
 // Componente principal
 function Tables() {
   const { user } = useAuth()
+  const { toasts, showSuccess, showErrorFromResponse, hideToast } = useToast()
   const [tables, setTables] = useState<Table[]>([])
   const [stats, setStats] = useState<TableStats | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [processing, setProcessing] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState<TableStatus | 'ALL'>('ALL')
@@ -591,7 +593,6 @@ function Tables() {
 
     try {
       setLoading(true)
-      setError(null)
       const [tablesData, statsData] = await Promise.all([
         tableService.getTables(businessId),
         tableService.getTableStats(businessId),
@@ -599,12 +600,11 @@ function Tables() {
       setTables(tablesData)
       setStats(statsData)
     } catch (err) {
-      console.error('Error al cargar mesas:', err)
-      setError('Error al cargar las mesas')
+      showErrorFromResponse(err, 'Error al cargar las mesas')
     } finally {
       setLoading(false)
     }
-  }, [businessId])
+  }, [businessId, showErrorFromResponse])
 
   useEffect(() => {
     loadTables()
@@ -629,24 +629,22 @@ function Tables() {
 
     try {
       setProcessing(true)
-      setError(null)
 
       if (editingTable) {
         // Editar mesa existente
         await tableService.updateTable(businessId, editingTable.id, data)
+        showSuccess('Mesa actualizada correctamente')
       } else {
         // Crear nueva mesa
         await tableService.createTable(businessId, data)
+        showSuccess('Mesa creada correctamente')
       }
 
       await loadTables()
       setShowTableModal(false)
       setEditingTable(null)
     } catch (err) {
-      console.error('Error al guardar mesa:', err)
-      const errorMsg = 'Error al guardar la mesa. Por favor, intenta nuevamente.'
-      setError(errorMsg)
-      alert(errorMsg)
+      showErrorFromResponse(err, 'Error al guardar la mesa')
     } finally {
       setProcessing(false)
     }
@@ -658,18 +656,15 @@ function Tables() {
 
     try {
       setProcessing(true)
-      setError(null)
 
       await tableService.updateTableStatus(businessId, changingStatusTable.id, { status })
+      showSuccess('Estado actualizado correctamente')
 
       await loadTables()
       setShowStatusModal(false)
       setChangingStatusTable(null)
     } catch (err) {
-      console.error('Error al cambiar estado:', err)
-      const errorMsg = 'Error al cambiar el estado. Por favor, intenta nuevamente.'
-      setError(errorMsg)
-      alert(errorMsg)
+      showErrorFromResponse(err, 'Error al cambiar el estado')
     } finally {
       setProcessing(false)
     }
@@ -681,18 +676,15 @@ function Tables() {
 
     try {
       setProcessing(true)
-      setError(null)
 
       await tableService.updateTableCapacity(businessId, changingCapacityTable.id, { capacity })
+      showSuccess('Capacidad actualizada correctamente')
 
       await loadTables()
       setShowCapacityModal(false)
       setChangingCapacityTable(null)
     } catch (err) {
-      console.error('Error al cambiar capacidad:', err)
-      const errorMsg = 'Error al cambiar la capacidad. Por favor, intenta nuevamente.'
-      setError(errorMsg)
-      alert(errorMsg)
+      showErrorFromResponse(err, 'Error al cambiar la capacidad')
     } finally {
       setProcessing(false)
     }
@@ -704,18 +696,15 @@ function Tables() {
 
     try {
       setIsDeleting(true)
-      setError(null)
 
       await tableService.deleteTable(businessId, tableToDelete.id)
+      showSuccess('Mesa eliminada correctamente')
 
       await loadTables()
       setShowDeleteModal(false)
       setTableToDelete(null)
     } catch (err) {
-      console.error('Error al eliminar mesa:', err)
-      const errorMsg = 'Error al eliminar la mesa. Por favor, intenta nuevamente.'
-      setError(errorMsg)
-      alert(errorMsg)
+      showErrorFromResponse(err, 'Error al eliminar la mesa')
     } finally {
       setIsDeleting(false)
     }
@@ -726,24 +715,24 @@ function Tables() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen p-4 bg-gradient-to-br from-gray-50 via-white to-gray-100 md:p-8">
+      <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 flex items-center gap-3">
+              <h1 className="flex items-center gap-3 text-3xl font-bold text-gray-900 md:text-4xl">
                 <TableIcon className="w-8 h-8 text-[#f74116]" />
                 Gestión de Mesas
               </h1>
-              <p className="text-gray-600 mt-2">
+              <p className="mt-2 text-gray-600">
                 Administra las mesas de tu negocio y su estado de ocupación
               </p>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={loadTables}
-                className="p-3 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="p-3 transition-colors bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
                 title="Recargar"
               >
                 <IoRefresh className="w-5 h-5 text-gray-600" />
@@ -767,11 +756,11 @@ function Tables() {
           <StatsCard stats={stats} loading={loading} />
 
           {/* Filtros */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-4 mb-6 bg-white border border-gray-200 rounded-xl">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {/* Búsqueda */}
               <div className="relative">
-                <IoSearchOutline className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <IoSearchOutline className="absolute w-5 h-5 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
                 <input
                   type="text"
                   placeholder="Buscar por código o sector..."
@@ -798,21 +787,14 @@ function Tables() {
           </div>
         </div>
 
-        {/* Error */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-            {error}
-          </div>
-        )}
-
         {/* Grid de mesas */}
         {filteredTables.length === 0 ? (
-          <div className="text-center py-16">
-            <TableIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+          <div className="py-16 text-center">
+            <TableIcon className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+            <h3 className="mb-2 text-xl font-semibold text-gray-900">
               {searchQuery || filterStatus !== 'ALL' ? 'No se encontraron mesas' : 'No hay mesas registradas'}
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="mb-6 text-gray-600">
               {searchQuery || filterStatus !== 'ALL'
                 ? 'Intenta ajustar los filtros de búsqueda'
                 : userIsOwner
@@ -833,7 +815,7 @@ function Tables() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredTables.map((table) => (
               <TableCard
                 key={table.id}
@@ -904,6 +886,13 @@ function Tables() {
           tableCode={tableToDelete?.tableCode || ''}
           isDeleting={isDeleting}
         />
+      </div>
+
+      {/* Toast notifications */}
+      <div className="fixed z-50 space-y-2 top-4 right-4">
+        {toasts.map((toast) => (
+          <Toast key={toast.id} {...toast} onClose={() => hideToast(toast.id)} />
+        ))}
       </div>
     </div>
   )

@@ -48,11 +48,26 @@ body {
     }
   }
 
+  @keyframes slide-in-from-top {
+    0% {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    100% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
   .animate-float-slow {
     animation: float-slow 8s ease-in-out infinite;
   }
 
   .animate-gentle-float {
     animation: gentle-float 6s ease-in-out infinite;
+  }
+
+  .animate-slide-in-from-top {
+    animation: slide-in-from-top 0.3s ease-out;
   }
 }

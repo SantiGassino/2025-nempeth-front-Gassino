@@ -140,7 +140,7 @@ export const tableService = {
   /**
    * Cambiar estado de mesa (PATCH)
    * Permisos: OWNER y EMPLOYEE
-   * Nota: No se puede cambiar a RESERVED manualmente
+   * Nota: No se puede cambiar a RESERVADO manualmente
    */
   updateTableStatus: async (
     businessId: string,
@@ -151,7 +151,7 @@ export const tableService = {
       // Validación: no se puede cambiar a RESERVED manualmente
       if (statusData.status === 'RESERVED') {
         throw new Error(
-          'No se puede cambiar manualmente a RESERVED. El estado RESERVED se asigna automáticamente 45 minutos antes del inicio de una reserva.',
+          'No se puede cambiar manualmente a RESERVADO. El estado RESERVADO se asigna automáticamente 45 minutos antes del inicio de una reserva.',
         );
       }
 

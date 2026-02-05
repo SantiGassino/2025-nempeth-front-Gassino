@@ -4,6 +4,8 @@ import { tableService, type Table } from '../services/tableService'
 import { useAuth } from '../contexts/useAuth'
 import LoadingScreen from '../components/LoadingScreen'
 import GanttModal from '../components/GanttModal'
+import Toast from '../components/Toast'
+import { useToast } from '../hooks/useToast'
 import { IoAddCircleOutline, IoRefresh, IoSearchOutline, IoCalendarOutline } from 'react-icons/io5'
 
 // Iconos SVG
@@ -43,7 +45,7 @@ function getStatusText(status: ReservationStatus): string {
     case 'CANCELLED':
       return 'Cancelada'
     case 'NO_SHOW':
-      return 'No Show'
+      return 'Ausente'
     default:
       return status
   }
@@ -61,11 +63,24 @@ function formatDateTime(dateTimeStr: string): string {
   })
 }
 
-// Calcular duración en horas
-function calculateDuration(start: string, end: string): number {
+// Calcular duración en horas y minutos
+function calculateDuration(start: string, end: string): { hours: number; minutes: number; totalHours: number } {
   const startDate = new Date(start)
   const endDate = new Date(end)
-  return (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60)
+  const totalMinutes = (endDate.getTime() - startDate.getTime()) / (1000 * 60)
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = Math.round(totalMinutes % 60)
+  const totalHours = totalMinutes / 60
+  return { hours, minutes, totalHours }
+}
+
+// Formatear duración para mostrar
+function formatDuration(start: string, end: string): string {
+  const duration = calculateDuration(start, end)
+  if (duration.totalHours < 1) {
+    return `${Math.round(duration.totalHours * 60)} min`
+  }
+  return `${duration.totalHours.toFixed(1)}h`
 }
 
 // Componente de tarjeta de reserva
@@ -89,10 +104,14 @@ function ReservationCard({
   onNoShow,
 }: ReservationCardProps) {
   const statusColor = getStatusColor(reservation.status)
-  const duration = calculateDuration(reservation.startDateTime, reservation.endDateTime)
+  const durationText = formatDuration(reservation.startDateTime, reservation.endDateTime)
+  
+  // Calcular capacidad total de las mesas asignadas
+  const totalTableCapacity = reservation.tables.reduce((sum, table) => sum + table.capacity, 0)
+  const extraSeatsNeeded = reservation.partySize - totalTableCapacity
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+    <div className="overflow-hidden transition-all duration-200 bg-white border border-gray-200 shadow-sm rounded-xl hover:shadow-md">
       {/* Header */}
       <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
         <div className="flex items-center justify-between mb-2">
@@ -116,11 +135,11 @@ function ReservationCard({
         {/* Fecha y hora */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <p className="text-xs text-gray-500 mb-1">Inicio</p>
+            <p className="mb-1 text-xs text-gray-500">Inicio</p>
             <p className="text-sm font-semibold text-gray-900">{formatDateTime(reservation.startDateTime)}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-500 mb-1">Fin</p>
+            <p className="mb-1 text-xs text-gray-500">Fin</p>
             <p className="text-sm font-semibold text-gray-900">{formatDateTime(reservation.endDateTime)}</p>
           </div>
         </div>
@@ -137,18 +156,18 @@ function ReservationCard({
             <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span>{duration.toFixed(1)}h</span>
+            <span>{durationText}</span>
           </div>
         </div>
 
         {/* Mesas */}
         <div>
-          <p className="text-xs text-gray-500 mb-2">Mesas asignadas</p>
+          <p className="mb-2 text-xs text-gray-500">Mesas asignadas</p>
           <div className="flex flex-wrap gap-2">
             {reservation.tables.map((table) => (
               <span
                 key={table.id}
-                className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded-md border border-gray-200"
+                className="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-100 border border-gray-200 rounded-md"
               >
                 {table.tableCode} ({table.capacity}p)
               </span>
@@ -156,17 +175,34 @@ function ReservationCard({
           </div>
         </div>
 
+        {/* Alerta de capacidad forzada */}
+        {reservation.forced && extraSeatsNeeded > 0 && (
+          <div className="p-3 border border-orange-200 rounded-lg bg-orange-50">
+            <div className="flex items-start gap-2">
+              <svg className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <div>
+                <p className="text-xs font-semibold text-orange-800">Capacidad Forzada</p>
+                <p className="text-xs text-orange-700 mt-0.5">
+                  Se necesitan <strong>{extraSeatsNeeded}</strong> {extraSeatsNeeded === 1 ? 'lugar adicional' : 'lugares adicionales'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Notas */}
         {reservation.notes && (
           <div className="pt-2 border-t border-gray-100">
-            <p className="text-xs text-gray-500 mb-1">Notas</p>
-            <p className="text-sm text-gray-700 italic">{reservation.notes}</p>
+            <p className="mb-1 text-xs text-gray-500">Notas</p>
+            <p className="text-sm italic text-gray-700">{reservation.notes}</p>
           </div>
         )}
       </div>
 
       {/* Acciones */}
-      <div className="p-4 bg-gray-50 border-t border-gray-100">
+      <div className="p-4 border-t border-gray-100 bg-gray-50">
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => onViewDetails(reservation)}
@@ -193,7 +229,7 @@ function ReservationCard({
                 onClick={() => onNoShow(reservation)}
                 className="flex-1 min-w-[100px] px-3 py-2 text-sm font-medium text-orange-700 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors duration-200"
               >
-                No Show
+                Ausente
               </button>
               <button
                 onClick={() => onCancel(reservation)}
@@ -343,14 +379,14 @@ function ReservationModal({
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
-      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden my-8">
+      <div className="w-full max-w-2xl my-8 overflow-hidden bg-white shadow-2xl rounded-2xl">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-[#f74116]/5 to-white">
           <h3 className="text-xl font-bold text-gray-900">
             {editingReservation ? 'Editar Reserva' : 'Nueva Reserva'}
           </h3>
           <button
-            className="text-gray-500 hover:text-gray-700 text-2xl"
+            className="text-2xl text-gray-500 hover:text-gray-700"
             onClick={onClose}
             disabled={isProcessing}
             type="button"
@@ -362,9 +398,9 @@ function ReservationModal({
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
           {/* Datos del cliente */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block mb-2 text-sm font-semibold text-gray-700">
                 Nombre del Cliente *
               </label>
               <input
@@ -379,7 +415,7 @@ function ReservationModal({
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block mb-2 text-sm font-semibold text-gray-700">
                 Contacto *
               </label>
               <input
@@ -395,9 +431,9 @@ function ReservationModal({
           </div>
 
           {/* Fecha y hora de inicio */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block mb-2 text-sm font-semibold text-gray-700">
                 Fecha de Inicio *
               </label>
               <input
@@ -411,7 +447,7 @@ function ReservationModal({
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block mb-2 text-sm font-semibold text-gray-700">
                 Hora de Inicio *
               </label>
               <input
@@ -426,9 +462,9 @@ function ReservationModal({
           </div>
 
           {/* Fecha y hora de fin */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block mb-2 text-sm font-semibold text-gray-700">
                 Fecha de Fin *
               </label>
               <input
@@ -442,7 +478,7 @@ function ReservationModal({
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block mb-2 text-sm font-semibold text-gray-700">
                 Hora de Fin *
               </label>
               <input
@@ -458,7 +494,7 @@ function ReservationModal({
 
           {/* Tamaño del grupo */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block mb-2 text-sm font-semibold text-gray-700">
               Tamaño del Grupo *
             </label>
             <input
@@ -474,10 +510,10 @@ function ReservationModal({
 
           {/* Selección de mesas */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block mb-2 text-sm font-semibold text-gray-700">
               Mesas * (Seleccione una o más)
             </label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-60 overflow-y-auto border border-gray-200 rounded-lg p-3">
+            <div className="grid grid-cols-2 gap-2 p-3 overflow-y-auto border border-gray-200 rounded-lg md:grid-cols-3 max-h-60">
               {availableTables.map((table) => (
                 <label
                   key={table.id}
@@ -496,7 +532,7 @@ function ReservationModal({
                   />
                   <span className="ml-2 text-sm font-medium text-gray-700">
                     {table.tableCode}
-                    <span className="text-xs text-gray-500 ml-1">({table.capacity}p)</span>
+                    <span className="ml-1 text-xs text-gray-500">({table.capacity}p)</span>
                   </span>
                 </label>
               ))}
@@ -505,7 +541,7 @@ function ReservationModal({
               <p className="mt-2 text-sm text-gray-600">
                 Capacidad total: <strong>{totalCapacity}</strong> personas
                 {parseInt(partySize) > totalCapacity && (
-                  <span className="text-orange-600 ml-2">
+                  <span className="ml-2 text-orange-600">
                     ⚠️ El grupo es más grande que la capacidad
                   </span>
                 )}
@@ -525,7 +561,7 @@ function ReservationModal({
             />
             <label htmlFor="forced" className="text-sm text-gray-700">
               Forzar reserva (solo omite validación de capacidad)
-              <span className="block text-xs text-gray-500 mt-1">
+              <span className="block mt-1 text-xs text-gray-500">
                 ⚠️ El solapamiento de horarios y buffer de 45 min son obligatorios
               </span>
             </label>
@@ -533,7 +569,7 @@ function ReservationModal({
 
           {/* Notas */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block mb-2 text-sm font-semibold text-gray-700">
               Notas (opcional)
             </label>
             <textarea
@@ -552,7 +588,7 @@ function ReservationModal({
               type="button"
               onClick={onClose}
               disabled={isProcessing}
-              className="flex-1 px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors bg-gray-200 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancelar
             </button>
@@ -581,16 +617,15 @@ function ReservationDetailsModal({ isOpen, onClose, reservation }: ReservationDe
   if (!isOpen || !reservation) return null
 
   const statusColor = getStatusColor(reservation.status)
-  const duration = calculateDuration(reservation.startDateTime, reservation.endDateTime)
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <div className="w-full max-w-2xl overflow-hidden bg-white shadow-2xl rounded-2xl">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-[#f74116]/5 to-white">
           <h3 className="text-xl font-bold text-gray-900">Detalles de Reserva</h3>
           <button
-            className="text-gray-500 hover:text-gray-700 text-2xl"
+            className="text-2xl text-gray-500 hover:text-gray-700"
             onClick={onClose}
             type="button"
           >
@@ -608,8 +643,8 @@ function ReservationDetailsModal({ isOpen, onClose, reservation }: ReservationDe
           </div>
 
           {/* Información del cliente */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h4 className="text-sm font-bold text-gray-900 mb-3">Información del Cliente</h4>
+          <div className="p-4 rounded-lg bg-gray-50">
+            <h4 className="mb-3 text-sm font-bold text-gray-900">Información del Cliente</h4>
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">Nombre:</span>
@@ -629,8 +664,8 @@ function ReservationDetailsModal({ isOpen, onClose, reservation }: ReservationDe
           </div>
 
           {/* Horario */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h4 className="text-sm font-bold text-gray-900 mb-3">Horario</h4>
+          <div className="p-4 rounded-lg bg-gray-50">
+            <h4 className="mb-3 text-sm font-bold text-gray-900">Horario</h4>
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">Inicio:</span>
@@ -642,19 +677,19 @@ function ReservationDetailsModal({ isOpen, onClose, reservation }: ReservationDe
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">Duración:</span>
-                <span className="text-sm font-semibold text-gray-900">{duration.toFixed(1)} horas</span>
+                <span className="text-sm font-semibold text-gray-900">{formatDuration(reservation.startDateTime, reservation.endDateTime)}</span>
               </div>
             </div>
           </div>
 
           {/* Mesas */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h4 className="text-sm font-bold text-gray-900 mb-3">Mesas Asignadas</h4>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+          <div className="p-4 rounded-lg bg-gray-50">
+            <h4 className="mb-3 text-sm font-bold text-gray-900">Mesas Asignadas</h4>
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
               {reservation.tables.map((table) => (
                 <div
                   key={table.id}
-                  className="p-3 bg-white border border-gray-200 rounded-lg text-center"
+                  className="p-3 text-center bg-white border border-gray-200 rounded-lg"
                 >
                   <p className="font-semibold text-gray-900">{table.tableCode}</p>
                   <p className="text-xs text-gray-500">Capacidad: {table.capacity}</p>
@@ -667,8 +702,8 @@ function ReservationDetailsModal({ isOpen, onClose, reservation }: ReservationDe
           </div>
 
           {/* Información adicional */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h4 className="text-sm font-bold text-gray-900 mb-3">Información Adicional</h4>
+          <div className="p-4 rounded-lg bg-gray-50">
+            <h4 className="mb-3 text-sm font-bold text-gray-900">Información Adicional</h4>
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">Creada por:</span>
@@ -687,9 +722,9 @@ function ReservationDetailsModal({ isOpen, onClose, reservation }: ReservationDe
 
           {/* Notas */}
           {reservation.notes && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <h4 className="text-sm font-bold text-gray-900 mb-2">Notas</h4>
-              <p className="text-sm text-gray-700 italic">{reservation.notes}</p>
+            <div className="p-4 border border-yellow-200 rounded-lg bg-yellow-50">
+              <h4 className="mb-2 text-sm font-bold text-gray-900">Notas</h4>
+              <p className="text-sm italic text-gray-700">{reservation.notes}</p>
             </div>
           )}
         </div>
@@ -698,7 +733,7 @@ function ReservationDetailsModal({ isOpen, onClose, reservation }: ReservationDe
         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
           <button
             onClick={onClose}
-            className="w-full px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            className="w-full px-4 py-2 text-sm font-semibold text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
           >
             Cerrar
           </button>
@@ -738,7 +773,7 @@ function ConfirmActionModal({
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
           <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
           <button
-            className="text-gray-500 hover:text-gray-700 text-2xl"
+            className="text-2xl text-gray-500 hover:text-gray-700"
             onClick={onClose}
             disabled={isProcessing}
             type="button"
@@ -754,7 +789,7 @@ function ConfirmActionModal({
         <div className="flex items-center justify-center gap-3 px-6 py-4 border-t border-gray-200">
           <button
             type="button"
-            className="px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-semibold text-gray-700 transition-colors bg-gray-200 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={onClose}
             disabled={isProcessing}
           >
@@ -777,17 +812,16 @@ function ConfirmActionModal({
 // Componente principal
 function Reservations() {
   const { user } = useAuth()
+  const { toasts, showSuccess, showWarning, showErrorFromResponse, hideToast } = useToast()
   const [reservations, setReservations] = useState<Reservation[]>([])
   const [availableTables, setAvailableTables] = useState<Table[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [processing, setProcessing] = useState(false)
 
   // Filtros
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState<ReservationStatus | 'ALL'>('ALL')
-  const [filterStartDate, setFilterStartDate] = useState('')
-  const [filterEndDate, setFilterEndDate] = useState('')
+  const [sortOrder, setSortOrder] = useState<'reciente' | 'antiguo'>('reciente')
 
   // Modales
   const [showReservationModal, setShowReservationModal] = useState(false)
@@ -812,20 +846,14 @@ function Reservations() {
 
     try {
       setLoading(true)
-      setError(null)
-      const data = await reservationService.getReservations(
-        businessId,
-        filterStartDate || undefined,
-        filterEndDate || undefined,
-      )
+      const data = await reservationService.getReservations(businessId)
       setReservations(data)
     } catch (err) {
-      console.error('Error al cargar reservas:', err)
-      setError('Error al cargar las reservas')
+      showErrorFromResponse(err, 'Error al cargar las reservas')
     } finally {
       setLoading(false)
     }
-  }, [businessId, filterStartDate, filterEndDate])
+  }, [businessId, showErrorFromResponse])
 
   // Cargar mesas disponibles
   const loadTables = useCallback(async () => {
@@ -844,9 +872,9 @@ function Reservations() {
     loadTables()
   }, [loadReservations, loadTables])
 
-  // Filtrar reservas
+  // Filtrar y ordenar reservas
   const filteredReservations = useMemo(() => {
-    return reservations.filter((reservation) => {
+    const filtered = reservations.filter((reservation) => {
       const matchesSearch =
         reservation.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         reservation.customerContact.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -856,7 +884,16 @@ function Reservations() {
 
       return matchesSearch && matchesStatus
     })
-  }, [reservations, searchQuery, filterStatus])
+
+    // Ordenar por fecha de inicio
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.startDateTime).getTime()
+      const dateB = new Date(b.startDateTime).getTime()
+      return sortOrder === 'reciente' ? dateB - dateA : dateA - dateB
+    })
+
+    return filtered
+  }, [reservations, searchQuery, filterStatus, sortOrder])
 
   // Estadísticas
   const stats = useMemo(() => {
@@ -885,24 +922,22 @@ function Reservations() {
 
     try {
       setProcessing(true)
-      setError(null)
 
       if (editingReservation) {
         // Editar reserva existente
         await reservationService.updateReservation(businessId, editingReservation.id, data)
+        showSuccess('Reserva actualizada correctamente')
       } else {
         // Crear nueva reserva
         await reservationService.createReservation(businessId, data)
+        showSuccess('Reserva creada correctamente')
       }
 
       await loadReservations()
       setShowReservationModal(false)
       setEditingReservation(null)
     } catch (err) {
-      console.error('Error al guardar reserva:', err)
-      const errorMsg = 'Error al guardar la reserva. Por favor, verifica los datos e intenta nuevamente.'
-      setError(errorMsg)
-      alert(errorMsg)
+      showErrorFromResponse(err, 'Error al guardar la reserva')
     } finally {
       setProcessing(false)
     }
@@ -910,6 +945,16 @@ function Reservations() {
 
   // Iniciar reserva
   const handleStartReservation = (reservation: Reservation) => {
+    const now = new Date()
+    const startTime = new Date(reservation.startDateTime)
+    const minutesUntilStart = (startTime.getTime() - now.getTime()) / (1000 * 60)
+
+    // Verificar si faltan más de 15 minutos
+    if (minutesUntilStart > 15) {
+      showWarning('Debe aguardar 15 minutos antes del horario de inicio para iniciar la reserva')
+      return
+    }
+
     setConfirmAction({
       title: 'Iniciar Reserva',
       message: `¿Confirmas que el cliente ${reservation.customerName} ha llegado? Las mesas cambiarán a estado OCUPADO.`,
@@ -920,11 +965,11 @@ function Reservations() {
         try {
           setProcessing(true)
           await reservationService.startReservation(businessId, reservation.id)
+          showSuccess('Reserva iniciada correctamente')
           await loadReservations()
           setShowConfirmModal(false)
         } catch (err) {
-          console.error('Error al iniciar reserva:', err)
-          alert('Error al iniciar la reserva. Por favor, intenta nuevamente.')
+          showErrorFromResponse(err, 'Error al iniciar la reserva')
         } finally {
           setProcessing(false)
         }
@@ -945,11 +990,11 @@ function Reservations() {
         try {
           setProcessing(true)
           await reservationService.completeReservation(businessId, reservation.id)
+          showSuccess('Reserva completada correctamente')
           await loadReservations()
           setShowConfirmModal(false)
         } catch (err) {
-          console.error('Error al completar reserva:', err)
-          alert('Error al completar la reserva. Por favor, intenta nuevamente.')
+          showErrorFromResponse(err, 'Error al completar la reserva')
         } finally {
           setProcessing(false)
         }
@@ -970,11 +1015,11 @@ function Reservations() {
         try {
           setProcessing(true)
           await reservationService.cancelReservation(businessId, reservation.id)
+          showSuccess('Reserva cancelada correctamente')
           await loadReservations()
           setShowConfirmModal(false)
         } catch (err) {
-          console.error('Error al cancelar reserva:', err)
-          alert('Error al cancelar la reserva. Por favor, intenta nuevamente.')
+          showErrorFromResponse(err, 'Error al cancelar la reserva')
         } finally {
           setProcessing(false)
         }
@@ -985,21 +1030,30 @@ function Reservations() {
 
   // Marcar no-show
   const handleNoShow = (reservation: Reservation) => {
+    const now = new Date()
+    const startTime = new Date(reservation.startDateTime)
+
+    // Verificar si aún no ha llegado la hora de inicio
+    if (now < startTime) {
+      showWarning('Solo se puede marcar como "Ausente" si la reserva ya inició en su horario correspondiente')
+      return
+    }
+
     setConfirmAction({
-      title: 'Marcar como No Show',
+      title: 'Marcar como Ausente',
       message: `¿Confirmas que el cliente ${reservation.customerName} no se presentó? Las mesas se liberarán.`,
-      confirmText: 'Marcar No Show',
+      confirmText: 'Marcar Ausente',
       confirmColor: 'bg-orange-600 hover:bg-orange-700',
       action: async () => {
         if (!businessId) return
         try {
           setProcessing(true)
           await reservationService.markNoShow(businessId, reservation.id)
+          showSuccess('Marcado como Ausente correctamente')
           await loadReservations()
           setShowConfirmModal(false)
         } catch (err) {
-          console.error('Error al marcar no-show:', err)
-          alert('Error al marcar no-show. Por favor, intenta nuevamente.')
+          showErrorFromResponse(err, 'Error al marcar no-show')
         } finally {
           setProcessing(false)
         }
@@ -1013,24 +1067,24 @@ function Reservations() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen p-4 bg-gradient-to-br from-gray-50 via-white to-gray-100 md:p-8">
+      <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 flex items-center gap-3">
+              <h1 className="flex items-center gap-3 text-3xl font-bold text-gray-900 md:text-4xl">
                 <ReservationIcon className="w-8 h-8 text-[#f74116]" />
                 Gestión de Reservas
               </h1>
-              <p className="text-gray-600 mt-2">
+              <p className="mt-2 text-gray-600">
                 Administra las reservas de tu negocio
               </p>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={loadReservations}
-                className="p-3 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="p-3 transition-colors bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
                 title="Recargar"
               >
                 <IoRefresh className="w-5 h-5 text-gray-600" />
@@ -1059,45 +1113,45 @@ function Reservations() {
           </div>
 
           {/* Estadísticas */}
-          <div className="bg-gradient-to-r from-white to-gray-50 border border-gray-200 rounded-xl p-6 mb-6 shadow-sm">
-            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <div className="p-6 mb-6 border border-gray-200 shadow-sm bg-gradient-to-r from-white to-gray-50 rounded-xl">
+            <h2 className="flex items-center gap-2 mb-4 text-lg font-bold text-gray-900">
               <IoCalendarOutline className="w-5 h-5 text-[#f74116]" />
               Estadísticas de Reservas
             </h2>
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-6">
               <div className="p-4 bg-white border border-gray-200 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">Total</p>
+                <p className="mb-1 text-sm text-gray-600">Total</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
               </div>
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-700 mb-1">Pendientes</p>
+              <div className="p-4 border border-blue-200 rounded-lg bg-blue-50">
+                <p className="mb-1 text-sm text-blue-700">Pendientes</p>
                 <p className="text-2xl font-bold text-blue-700">{stats.pending}</p>
               </div>
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm text-green-700 mb-1">En Curso</p>
+              <div className="p-4 border border-green-200 rounded-lg bg-green-50">
+                <p className="mb-1 text-sm text-green-700">En Curso</p>
                 <p className="text-2xl font-bold text-green-700">{stats.inProgress}</p>
               </div>
-              <div className="p-4 bg-gray-50 border border-gray-300 rounded-lg">
-                <p className="text-sm text-gray-700 mb-1">Completadas</p>
+              <div className="p-4 border border-gray-300 rounded-lg bg-gray-50">
+                <p className="mb-1 text-sm text-gray-700">Completadas</p>
                 <p className="text-2xl font-bold text-gray-700">{stats.completed}</p>
               </div>
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-700 mb-1">Canceladas</p>
+              <div className="p-4 border border-red-200 rounded-lg bg-red-50">
+                <p className="mb-1 text-sm text-red-700">Canceladas</p>
                 <p className="text-2xl font-bold text-red-700">{stats.cancelled}</p>
               </div>
-              <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                <p className="text-sm text-orange-700 mb-1">No Show</p>
+              <div className="p-4 border border-orange-200 rounded-lg bg-orange-50">
+                <p className="mb-1 text-sm text-orange-700">Ausentes</p>
                 <p className="text-2xl font-bold text-orange-700">{stats.noShow}</p>
               </div>
             </div>
           </div>
 
           {/* Filtros */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="p-4 mb-6 bg-white border border-gray-200 rounded-xl">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {/* Búsqueda */}
               <div className="relative">
-                <IoSearchOutline className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <IoSearchOutline className="absolute w-5 h-5 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
                 <input
                   type="text"
                   placeholder="Buscar por cliente o mesa..."
@@ -1119,50 +1173,33 @@ function Reservations() {
                   <option value="IN_PROGRESS">En Curso</option>
                   <option value="COMPLETED">Completadas</option>
                   <option value="CANCELLED">Canceladas</option>
-                  <option value="NO_SHOW">No Show</option>
+                  <option value="NO_SHOW">Ausentes</option>
                 </select>
               </div>
 
-              {/* Fecha inicio */}
+              {/* Ordenar por fecha */}
               <div>
-                <input
-                  type="date"
-                  value={filterStartDate}
-                  onChange={(e) => setFilterStartDate(e.target.value)}
+                <select
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value as 'reciente' | 'antiguo')}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f74116] focus:border-transparent"
-                  placeholder="Fecha inicio"
-                />
-              </div>
-
-              {/* Fecha fin */}
-              <div>
-                <input
-                  type="date"
-                  value={filterEndDate}
-                  onChange={(e) => setFilterEndDate(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f74116] focus:border-transparent"
-                  placeholder="Fecha fin"
-                />
+                >
+                  <option value="reciente">Más recientes</option>
+                  <option value="antiguo">Más antiguos</option>
+                </select>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Error */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-            {error}
-          </div>
-        )}
-
         {/* Grid de reservas */}
         {filteredReservations.length === 0 ? (
-          <div className="text-center py-16">
-            <ReservationIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+          <div className="py-16 text-center">
+            <ReservationIcon className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+            <h3 className="mb-2 text-xl font-semibold text-gray-900">
               {searchQuery || filterStatus !== 'ALL' ? 'No se encontraron reservas' : 'No hay reservas registradas'}
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="mb-6 text-gray-600">
               {searchQuery || filterStatus !== 'ALL'
                 ? 'Intenta ajustar los filtros de búsqueda'
                 : 'Crea tu primera reserva para comenzar'}
@@ -1181,7 +1218,7 @@ function Reservations() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredReservations.map((reservation) => (
               <ReservationCard
                 key={reservation.id}
@@ -1246,6 +1283,13 @@ function Reservations() {
           onClose={() => setShowGanttModal(false)}
           businessId={businessId || ''}
         />
+      </div>
+
+      {/* Toast notifications */}
+      <div className="fixed z-50 space-y-2 top-4 right-4">
+        {toasts.map((toast) => (
+          <Toast key={toast.id} {...toast} onClose={() => hideToast(toast.id)} />
+        ))}
       </div>
     </div>
   )

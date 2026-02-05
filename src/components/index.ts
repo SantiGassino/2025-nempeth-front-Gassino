@@ -6,3 +6,4 @@ export { ProtectedRoute } from './ProtectedRoute';
 export { default as Sidebar } from './Sidebar';
 export { default as SuccesOperation } from './SuccesOperation';
 export { default as GanttModal } from './GanttModal';
+export { default as Toast } from './Toast';

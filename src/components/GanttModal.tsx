@@ -347,7 +347,7 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
                         {status === 'IN_PROGRESS' && 'En Curso'}
                         {status === 'COMPLETED' && 'Completada'}
                         {status === 'CANCELLED' && 'Cancelada'}
-                        {status === 'NO_SHOW' && 'No Show'}
+                        {status === 'NO_SHOW' && 'Ausente'}
                       </span>
                     </div>
                   ))}
