@@ -21,6 +21,7 @@ export interface Reservation {
   tables: ReservationTable[];
   customerName: string;
   customerContact: string;
+  customerDocument: string;
   startDateTime: string; // ISO 8601 con zona horaria
   endDateTime: string;
   partySize: number;
@@ -35,6 +36,7 @@ export interface Reservation {
 export interface CreateReservationRequest {
   customerName: string;
   customerContact: string;
+  customerDocument: string;
   startDateTime: string;
   endDateTime: string;
   partySize: number;
@@ -47,6 +49,7 @@ export interface CreateReservationRequest {
 export interface UpdateReservationRequest {
   customerName?: string;
   customerContact?: string;
+  customerDocument?: string;
   startDateTime?: string;
   endDateTime?: string;
   partySize?: number;
@@ -58,6 +61,7 @@ export interface UpdateReservationRequest {
 export interface GanttReservation {
   reservationId: string;
   customerName: string;
+  customerDocument: string;
   startDateTime: string;
   endDateTime: string;
   partySize: number;
@@ -99,6 +103,7 @@ export interface TableUtilization {
 export interface ClientReliability {
   customerName: string;
   customerContact: string;
+  customerDocument: string;
   totalReservations: number;
   completedReservations: number;
   noShows: number;

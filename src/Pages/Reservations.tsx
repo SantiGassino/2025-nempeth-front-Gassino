@@ -122,6 +122,7 @@ function ReservationCard({
             </div>
             <div>
               <h3 className="text-lg font-bold text-gray-900">{reservation.customerName}</h3>
+              <p className="text-sm text-gray-600">DNI: {reservation.customerDocument}</p>
               <p className="text-sm text-gray-500">{reservation.customerContact}</p>
             </div>
           </div>
@@ -270,6 +271,7 @@ interface ReservationModalProps {
   onSave: (data: {
     customerName: string
     customerContact: string
+    customerDocument: string
     startDateTime: string
     endDateTime: string
     partySize: number
@@ -292,6 +294,7 @@ function ReservationModal({
 }: ReservationModalProps) {
   const [customerName, setCustomerName] = useState('')
   const [customerContact, setCustomerContact] = useState('')
+  const [customerDocument, setCustomerDocument] = useState('')
   const [startDate, setStartDate] = useState('')
   const [startTime, setStartTime] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -305,6 +308,7 @@ function ReservationModal({
     if (editingReservation) {
       setCustomerName(editingReservation.customerName)
       setCustomerContact(editingReservation.customerContact)
+      setCustomerDocument(editingReservation.customerDocument)
       
       const start = new Date(editingReservation.startDateTime)
       setStartDate(start.toISOString().split('T')[0])
@@ -327,6 +331,7 @@ function ReservationModal({
       
       setCustomerName('')
       setCustomerContact('')
+      setCustomerDocument('')
       setStartDate(tomorrow.toISOString().split('T')[0])
       setStartTime('20:00')
       
@@ -367,6 +372,7 @@ function ReservationModal({
     onSave({
       customerName: customerName.trim(),
       customerContact: customerContact.trim(),
+      customerDocument: customerDocument.trim(),
       startDateTime,
       endDateTime,
       partySize: parseInt(partySize),
@@ -429,6 +435,28 @@ function ReservationModal({
                 disabled={isProcessing}
               />
             </div>
+          </div>
+
+          {/* Documento (DNI) */}
+          <div>
+            <label className="block mb-2 text-sm font-semibold text-gray-700">
+              Documento (DNI/CI/Pasaporte) *
+            </label>
+            <input
+              type="text"
+              value={customerDocument}
+              onChange={(e) => {
+                // Solo permitir números
+                const value = e.target.value.replace(/\D/g, '')
+                setCustomerDocument(value)
+              }}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f74116] focus:border-transparent"
+              placeholder="12345678"
+              required
+              disabled={isProcessing}
+              maxLength={10}
+            />
+            <p className="mt-1 text-xs text-gray-500">Solo números, sin puntos ni guiones</p>
           </div>
 
           {/* Fecha y hora de inicio */}
@@ -917,6 +945,7 @@ function Reservations() {
   const handleSaveReservation = async (data: {
     customerName: string
     customerContact: string
+    customerDocument: string
     startDateTime: string
     endDateTime: string
     partySize: number

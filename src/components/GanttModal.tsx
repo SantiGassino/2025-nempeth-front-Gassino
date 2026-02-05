@@ -361,7 +361,7 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
                                   height: `${laneHeight - 4}px`,
                                   minWidth: '15px',
                                 }}
-                                title={`${reservation.customerName} - ${reservation.partySize}p\n${new Date(reservation.startDateTime).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - ${new Date(reservation.endDateTime).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}\nEstado: ${reservation.status}`}
+                                title={`${reservation.customerName}\nDoc: ${reservation.customerDocument}\nPersonas: ${reservation.partySize}\n${new Date(reservation.startDateTime).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - ${new Date(reservation.endDateTime).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}\nEstado: ${reservation.status}`}
                               >
                                 <div className={`text-[10px] font-semibold ${colors.text} truncate`}>
                                   {reservation.customerName}
@@ -443,6 +443,9 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
                               <h4 className={`text-sm font-bold ${colors.text} truncate`}>
                                 {reservation.customerName}
                               </h4>
+                              <p className="text-xs text-gray-600 truncate">
+                                DNI: {reservation.customerDocument}
+                              </p>
                             </div>
                             <span className={`ml-2 px-2 py-0.5 text-[10px] font-semibold ${colors.bg} ${colors.text} border ${colors.border} rounded-full flex-shrink-0`}>
                               {reservation.status === 'PENDING' && 'Pendiente'}

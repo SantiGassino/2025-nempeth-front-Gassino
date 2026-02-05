@@ -124,6 +124,7 @@ function ReservationCard({ reservation, onViewDetails }: ReservationCardProps) {
             </div>
             <div>
               <h3 className="text-lg font-bold text-gray-900">{reservation.customerName}</h3>
+              <p className="text-sm text-gray-600">DNI: {reservation.customerDocument}</p>
               <p className="text-sm text-gray-500">{reservation.customerContact}</p>
             </div>
           </div>
@@ -429,6 +430,7 @@ function ReservationHistory() {
                 <table className="w-full">
                   <thead className="border-b border-gray-200 bg-gray-50">
                     <tr>
+                      <th className="px-4 py-2 text-xs font-semibold text-left text-gray-700">DNI</th>
                       <th className="px-4 py-2 text-xs font-semibold text-left text-gray-700">Cliente</th>
                       <th className="px-4 py-2 text-xs font-semibold text-center text-gray-700">Total</th>
                       <th className="px-4 py-2 text-xs font-semibold text-center text-gray-700">Completadas</th>
@@ -440,6 +442,7 @@ function ReservationHistory() {
                   <tbody className="divide-y divide-gray-200">
                     {analytics.clientReliability.slice(0, 10).map((client, idx) => (
                       <tr key={idx} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 text-sm font-mono text-gray-700">{client.customerDocument}</td>
                         <td className="px-4 py-3">
                           <div className="font-medium text-gray-900">{client.customerName}</div>
                           <div className="text-xs text-gray-500">{client.customerContact}</div>
