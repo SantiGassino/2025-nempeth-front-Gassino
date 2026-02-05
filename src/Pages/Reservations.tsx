@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { reservationService, type Reservation, type ReservationStatus } from '../services/reservationService'
 import { tableService, type Table } from '../services/tableService'
 import { useAuth } from '../contexts/useAuth'
+import { isOwner } from '../guards/getDefaultRoute'
 import LoadingScreen from '../components/LoadingScreen'
 import GanttModal from '../components/GanttModal'
 import { useToast } from '../hooks/useToast'
@@ -92,6 +93,7 @@ interface ReservationCardProps {
   onComplete: (reservation: Reservation) => void
   onCancel: (reservation: Reservation) => void
   onNoShow: (reservation: Reservation) => void
+  isOwner: boolean
 }
 
 function ReservationCard({
@@ -102,6 +104,7 @@ function ReservationCard({
   onComplete,
   onCancel,
   onNoShow,
+  isOwner,
 }: ReservationCardProps) {
   const statusColor = getStatusColor(reservation.status)
   const durationText = formatDuration(reservation.startDateTime, reservation.endDateTime)
@@ -214,12 +217,14 @@ function ReservationCard({
 
           {reservation.status === 'PENDING' && (
             <>
-              <button
-                onClick={() => onEdit(reservation)}
-                className="flex-1 min-w-[100px] px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors duration-200"
-              >
-                Editar
-              </button>
+              {isOwner && (
+                <button
+                  onClick={() => onEdit(reservation)}
+                  className="flex-1 min-w-[100px] px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors duration-200"
+                >
+                  Editar
+                </button>
+              )}
               <button
                 onClick={() => onStart(reservation)}
                 className="flex-1 min-w-[100px] px-3 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors duration-200"
@@ -232,12 +237,14 @@ function ReservationCard({
               >
                 Ausente
               </button>
-              <button
-                onClick={() => onCancel(reservation)}
-                className="flex-1 min-w-[100px] px-3 py-2 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors duration-200"
-              >
-                Cancelar
-              </button>
+              {isOwner && (
+                <button
+                  onClick={() => onCancel(reservation)}
+                  className="flex-1 min-w-[100px] px-3 py-2 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors duration-200"
+                >
+                  Cancelar
+                </button>
+              )}
             </>
           )}
 
@@ -249,12 +256,14 @@ function ReservationCard({
               >
                 Completar
               </button>
-              <button
-                onClick={() => onCancel(reservation)}
-                className="flex-1 min-w-[100px] px-3 py-2 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors duration-200"
-              >
-                Cancelar
-              </button>
+              {isOwner && (
+                <button
+                  onClick={() => onCancel(reservation)}
+                  className="flex-1 min-w-[100px] px-3 py-2 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors duration-200"
+                >
+                  Cancelar
+                </button>
+              )}
             </>
           )}
         </div>
@@ -1133,24 +1142,28 @@ function Reservations() {
                 </svg>
                 <span className="hidden sm:inline">Ocupación</span>
               </button>
-              <Link
-                to="/reservations/history"
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-[#f74116] text-[#f74116] rounded-lg hover:bg-[#fff5f3] transition-colors font-semibold"
-                title="Ver historial y análisis"
-              >
-                <IoCalendarOutline className="w-5 h-5" />
-                <span className="hidden sm:inline">Historial</span>
-              </Link>
-              <button
-                onClick={() => {
-                  setEditingReservation(null)
-                  setShowReservationModal(true)
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-[#f74116] text-white rounded-lg hover:bg-[#d63612] transition-colors font-semibold"
-              >
-                <IoAddCircleOutline className="w-5 h-5" />
-                <span className="hidden sm:inline">Nueva Reserva</span>
-              </button>
+              {isOwner(user) && (
+                <Link
+                  to="/reservations/history"
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-[#f74116] text-[#f74116] rounded-lg hover:bg-[#fff5f3] transition-colors font-semibold"
+                  title="Ver historial y análisis"
+                >
+                  <IoCalendarOutline className="w-5 h-5" />
+                  <span className="hidden sm:inline">Historial</span>
+                </Link>
+              )}
+              {isOwner(user) && (
+                <button
+                  onClick={() => {
+                    setEditingReservation(null)
+                    setShowReservationModal(true)
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-[#f74116] text-white rounded-lg hover:bg-[#d63612] transition-colors font-semibold"
+                >
+                  <IoAddCircleOutline className="w-5 h-5" />
+                  <span className="hidden sm:inline">Nueva Reserva</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -1246,7 +1259,7 @@ function Reservations() {
                 ? 'Intenta ajustar los filtros de búsqueda'
                 : 'Crea tu primera reserva para comenzar'}
             </p>
-            {!searchQuery && filterStatus === 'ALL' && (
+            {!searchQuery && filterStatus === 'ALL' && isOwner(user) && (
               <button
                 onClick={() => {
                   setEditingReservation(null)
@@ -1277,6 +1290,7 @@ function Reservations() {
                 onComplete={handleCompleteReservation}
                 onCancel={handleCancelReservation}
                 onNoShow={handleNoShow}
+                isOwner={isOwner(user)}
               />
             ))}
           </div>

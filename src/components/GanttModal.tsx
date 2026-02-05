@@ -17,11 +17,22 @@ const STATUS_COLORS: Record<ReservationStatus, { bg: string; border: string; tex
   NO_SHOW: { bg: 'bg-orange-100', border: 'border-orange-400', text: 'text-orange-700' },
 };
 
+// Textos en español para los estados
+const STATUS_TEXT: Record<ReservationStatus, string> = {
+  PENDING: 'Pendiente',
+  IN_PROGRESS: 'En Curso',
+  COMPLETED: 'Completada',
+  CANCELLED: 'Cancelada',
+  NO_SHOW: 'Ausente',
+};
+
 const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: GanttModalProps) => {
   const [currentDate, setCurrentDate] = useState<Date>(initialDate);
   const [ganttData, setGanttData] = useState<GanttTableData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hoveredReservation, setHoveredReservation] = useState<GanttReservation | null>(null);
+  const [popoverPosition, setPopoverPosition] = useState<{ top: number; left: number } | null>(null);
 
   // Cargar datos del Gantt
   const loadGanttData = useCallback(async () => {
@@ -353,7 +364,7 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
                               
                               {/* Reserva principal */}
                               <div
-                                className={`absolute ${colors.bg} ${colors.border} border-l-4 rounded-r px-1.5 py-0.5 overflow-hidden cursor-pointer hover:shadow-lg transition-shadow z-10`}
+                                className={`absolute ${colors.bg} ${colors.border} border-l-4 rounded-r px-1.5 py-0.5 overflow-hidden cursor-pointer hover:shadow-lg hover:z-20 transition-all z-10`}
                                 style={{
                                   left: position.left,
                                   width: position.width,
@@ -361,7 +372,18 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
                                   height: `${laneHeight - 4}px`,
                                   minWidth: '15px',
                                 }}
-                                title={`${reservation.customerName}\nDoc: ${reservation.customerDocument}\nPersonas: ${reservation.partySize}\n${new Date(reservation.startDateTime).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - ${new Date(reservation.endDateTime).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}\nEstado: ${reservation.status}`}
+                                onMouseEnter={(e) => {
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  setHoveredReservation(reservation);
+                                  setPopoverPosition({
+                                    top: rect.bottom + 10,
+                                    left: rect.left,
+                                  });
+                                }}
+                                onMouseLeave={() => {
+                                  setHoveredReservation(null);
+                                  setPopoverPosition(null);
+                                }}
                               >
                                 <div className={`text-[10px] font-semibold ${colors.text} truncate`}>
                                   {reservation.customerName}
@@ -496,6 +518,117 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
             </div>
           )}
         </div>
+
+        {/* Popover de detalles de reserva */}
+        {hoveredReservation && popoverPosition && (
+          <div
+            className="fixed z-50 bg-white border border-gray-200 shadow-2xl w-80 rounded-xl"
+            style={{
+              top: `${popoverPosition.top}px`,
+              left: `${popoverPosition.left}px`,
+              maxHeight: 'calc(100vh - 100px)',
+              overflowY: 'auto'
+            }}
+            onMouseEnter={() => {
+              // Mantener el popover visible cuando el mouse está sobre él
+              setHoveredReservation(hoveredReservation);
+            }}
+            onMouseLeave={() => {
+              setHoveredReservation(null);
+              setPopoverPosition(null);
+            }}
+          >
+            {/* Header */}
+            <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-[#f74116]/10">
+                  <svg className="w-6 h-6 text-[#f74116]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-bold text-gray-900 truncate">
+                    {hoveredReservation.customerName}
+                  </h4>
+                  <p className="text-xs text-gray-500">
+                    Reserva #{hoveredReservation.reservationId.slice(-8)}
+                  </p>
+                </div>
+                <span className={`px-2.5 py-1 text-[10px] font-bold ${STATUS_COLORS[hoveredReservation.status].bg} ${STATUS_COLORS[hoveredReservation.status].text} border ${STATUS_COLORS[hoveredReservation.status].border} rounded-full`}>
+                  {STATUS_TEXT[hoveredReservation.status]}
+                </span>
+              </div>
+            </div>
+
+            {/* Detalles */}
+            <ul className="p-4 space-y-3">
+              {/* DNI */}
+              <li>
+                <div className="flex items-center gap-3 text-sm text-gray-900">
+                  <svg className="w-4 h-4 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                  </svg>
+                  <div>
+                    <span className="text-xs text-gray-500">Documento:</span>
+                    <span className="ml-1 font-mono font-semibold">{hoveredReservation.customerDocument}</span>
+                  </div>
+                </div>
+              </li>
+
+              {/* Horario */}
+              <li>
+                <div className="flex items-center gap-3 text-sm text-gray-900">
+                  <svg className="w-4 h-4 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div>
+                    <span className="text-xs text-gray-500">Horario:</span>
+                    <div className="font-semibold">
+                      {new Date(hoveredReservation.startDateTime).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - {new Date(hoveredReservation.endDateTime).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                </div>
+              </li>
+
+              {/* Personas */}
+              <li>
+                <div className="flex items-center gap-3 text-sm text-gray-900">
+                  <svg className="w-4 h-4 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  <div>
+                    <span className="text-xs text-gray-500">Tamaño del grupo:</span>
+                    <span className="ml-1 font-semibold">{hoveredReservation.partySize} {hoveredReservation.partySize === 1 ? 'persona' : 'personas'}</span>
+                  </div>
+                </div>
+              </li>
+
+              {/* Mesa */}
+              <li>
+                <div className="flex items-center gap-3 text-sm text-gray-900">
+                  <svg className="w-4 h-4 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  <div>
+                    <span className="text-xs text-gray-500">Visible en el Gantt</span>
+                  </div>
+                </div>
+              </li>
+            </ul>
+
+            {/* Footer */}
+            <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <div className="flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Pasa el mouse para ver detalles</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

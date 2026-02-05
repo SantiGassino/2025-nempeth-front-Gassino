@@ -156,11 +156,11 @@ function AppRoutes() {
       <Route
         path="/reservations/history"
         element={
-          <OwnerOrActiveEmployeeGuard>
+          <OwnerGuard>
             <Layout>
               <ReservationHistory />
             </Layout>
-          </OwnerOrActiveEmployeeGuard>
+          </OwnerGuard>
         }
       />
 
