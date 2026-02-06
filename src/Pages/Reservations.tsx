@@ -1171,8 +1171,11 @@ function Reservations() {
           <div className="p-6 mb-6 border border-gray-200 shadow-sm bg-gradient-to-r from-white to-gray-50 rounded-xl">
             <h2 className="flex items-center gap-2 mb-4 text-lg font-bold text-gray-900">
               <IoCalendarOutline className="w-5 h-5 text-[#f74116]" />
-              Estadísticas - Reservas Próximas
+              Estadísticas - Reservas Actuales y Futuras
             </h2>
+            <p className="mb-4 text-sm text-gray-600">
+              Incluye reservas desde hoy en adelante y todas las reservas en curso
+            </p>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-6">
               <div className="p-4 bg-white border border-gray-200 rounded-lg">
                 <p className="mb-1 text-sm text-gray-600">Total</p>
@@ -1252,12 +1255,12 @@ function Reservations() {
           <div className="py-16 text-center">
             <ReservationIcon className="w-16 h-16 mx-auto mb-4 text-gray-300" />
             <h3 className="mb-2 text-xl font-semibold text-gray-900">
-              {searchQuery || filterStatus !== 'ALL' ? 'No se encontraron reservas' : 'No hay reservas registradas'}
+              {searchQuery || filterStatus !== 'ALL' ? 'No se encontraron reservas' : 'No hay reservas próximas'}
             </h3>
             <p className="mb-6 text-gray-600">
               {searchQuery || filterStatus !== 'ALL'
                 ? 'Intenta ajustar los filtros de búsqueda'
-                : 'Crea tu primera reserva para comenzar'}
+                : 'No tienes reservas programadas para hoy o el futuro'}
             </p>
             {!searchQuery && filterStatus === 'ALL' && isOwner(user) && (
               <button

@@ -293,15 +293,13 @@ function ReservationHistory() {
     return sorted
   }, [pastReservations, searchQuery, filterStatus, sortOrder])
 
-  // Estadísticas filtradas
+  // Estadísticas filtradas (solo estados que aparecen en /past)
   const stats = useMemo(() => {
     return {
       total: filteredReservations.length,
       completed: filteredReservations.filter((r) => r.status === 'COMPLETED').length,
       cancelled: filteredReservations.filter((r) => r.status === 'CANCELLED').length,
       noShow: filteredReservations.filter((r) => r.status === 'NO_SHOW').length,
-      pending: filteredReservations.filter((r) => r.status === 'PENDING').length,
-      inProgress: filteredReservations.filter((r) => r.status === 'IN_PROGRESS').length,
     }
   }, [filteredReservations])
 
@@ -329,7 +327,7 @@ function ReservationHistory() {
                   Historial y Análisis
                 </h1>
               </div>
-              <p className="text-gray-600 ml-14">Visualiza el historial completo y métricas de rendimiento</p>
+              <p className="text-gray-600 ml-14">Reservas anteriores a hoy y métricas de rendimiento</p>
             </div>
             <button
               onClick={loadHistoryData}
@@ -441,7 +439,7 @@ function ReservationHistory() {
                   <tbody className="divide-y divide-gray-200">
                     {analytics.clientReliability.slice(0, 10).map((client, idx) => (
                       <tr key={idx} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-sm font-mono text-gray-700">{client.customerDocument}</td>
+                        <td className="px-4 py-3 font-mono text-sm text-gray-700">{client.customerDocument}</td>
                         <td className="px-4 py-3">
                           <div className="font-medium text-gray-900">{client.customerName}</div>
                           <div className="text-xs text-gray-500">{client.customerContact}</div>
@@ -546,7 +544,10 @@ function ReservationHistory() {
 
           {/* Estadísticas */}
           <div className="p-6 mb-6 border border-gray-200 shadow-sm bg-gradient-to-r from-white to-gray-50 rounded-xl">
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-6">
+            <p className="mb-4 text-sm text-gray-600">
+              Incluye solo reservas anteriores a hoy con estados finalizados
+            </p>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
               <div className="p-4 bg-white border border-gray-200 rounded-lg">
                 <p className="mb-1 text-sm text-gray-600">Total</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
@@ -562,14 +563,6 @@ function ReservationHistory() {
               <div className="p-4 border border-orange-200 rounded-lg bg-orange-50">
                 <p className="mb-1 text-sm text-orange-700">Ausentes</p>
                 <p className="text-2xl font-bold text-orange-700">{stats.noShow}</p>
-              </div>
-              <div className="p-4 border border-blue-200 rounded-lg bg-blue-50">
-                <p className="mb-1 text-sm text-blue-700">Pendientes</p>
-                <p className="text-2xl font-bold text-blue-700">{stats.pending}</p>
-              </div>
-              <div className="p-4 border border-green-200 rounded-lg bg-green-50">
-                <p className="mb-1 text-sm text-green-700">En Curso</p>
-                <p className="text-2xl font-bold text-green-700">{stats.inProgress}</p>
               </div>
             </div>
           </div>
@@ -597,8 +590,6 @@ function ReservationHistory() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f74116] focus:border-transparent"
                 >
                   <option value="ALL">Todos los estados</option>
-                  <option value="PENDING">Pendientes</option>
-                  <option value="IN_PROGRESS">En Curso</option>
                   <option value="COMPLETED">Completadas</option>
                   <option value="CANCELLED">Canceladas</option>
                   <option value="NO_SHOW">Ausentes</option>
