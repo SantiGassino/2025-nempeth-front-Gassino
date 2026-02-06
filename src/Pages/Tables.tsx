@@ -22,6 +22,8 @@ function getStatusColor(status: TableStatus): string {
       return 'bg-yellow-100 text-yellow-800 border-yellow-200'
     case 'OCCUPIED':
       return 'bg-red-100 text-red-800 border-red-200'
+    case 'INACTIVE':
+      return 'bg-gray-100 text-gray-600 border-gray-300'
     default:
       return 'bg-gray-100 text-gray-800 border-gray-200'
   }
@@ -36,6 +38,8 @@ function getStatusText(status: TableStatus): string {
       return 'Reservada'
     case 'OCCUPIED':
       return 'Ocupada'
+    case 'INACTIVE':
+      return 'Inactiva'
     default:
       return status
   }
@@ -46,22 +50,24 @@ interface TableCardProps {
   table: Table
   onEdit: (table: Table) => void
   onDelete: (table: Table) => void
+  onReactivate: (table: Table) => void
   onChangeStatus: (table: Table) => void
   onChangeCapacity: (table: Table) => void
   isOwner: boolean
 }
 
-function TableCard({ table, onEdit, onDelete, onChangeStatus, onChangeCapacity, isOwner }: TableCardProps) {
+function TableCard({ table, onEdit, onDelete, onReactivate, onChangeStatus, onChangeCapacity, isOwner }: TableCardProps) {
   const statusColor = getStatusColor(table.status)
+  const isInactive = table.status === 'INACTIVE'
 
   return (
-    <div className="overflow-hidden transition-all duration-200 bg-white border border-gray-200 shadow-sm rounded-xl hover:shadow-md">
+    <div className={`overflow-hidden transition-all duration-200 bg-white border border-gray-200 shadow-sm rounded-xl hover:shadow-md ${isInactive ? 'opacity-75' : ''}`}>
       {/* Header con código y estado */}
       <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-[#f74116]/10 rounded-lg">
-              <TableIcon className="w-6 h-6 text-[#f74116]" />
+            <div className={`p-2 rounded-lg ${isInactive ? 'bg-gray-200' : 'bg-[#f74116]/10'}`}>
+              <TableIcon className={`w-6 h-6 ${isInactive ? 'text-gray-500' : 'text-[#f74116]'}`} />
             </div>
             <div>
               <h3 className="text-lg font-bold text-gray-900">{table.tableCode}</h3>
@@ -84,47 +90,82 @@ function TableCard({ table, onEdit, onDelete, onChangeStatus, onChangeCapacity, 
             <span className="font-semibold">Capacidad:</span> {table.capacity} {table.capacity === 1 ? 'persona' : 'personas'}
           </span>
         </div>
+        {isInactive && (
+          <div className="p-3 border border-gray-200 rounded-lg bg-gray-50">
+            <div className="flex items-start gap-2">
+              <svg className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <div>
+                <p className="text-xs font-semibold text-gray-800">Mesa Inactiva</p>
+                <p className="text-xs text-gray-600 mt-0.5">
+                  No se puede usar ni editar. Reactive para habilitarla.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Acciones */}
       <div className="p-4 border-t border-gray-100 bg-gray-50">
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => onChangeStatus(table)}
-            className="flex-1 min-w-[120px] px-3 py-2 text-sm font-medium text-white bg-[#f74116] hover:bg-[#d63612] rounded-lg transition-colors duration-200"
-          >
-            Cambiar Estado
-          </button>
-          <button
-            onClick={() => onChangeCapacity(table)}
-            disabled={table.status !== 'FREE'}
-            className="flex-1 min-w-[120px] px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
-          >
-            Capacidad
-          </button>
-          {isOwner && (
-            <>
+        {isInactive ? (
+          /* Acciones para mesa INACTIVE */
+          <div className="space-y-2">
+            {isOwner && (
               <button
-                onClick={() => onEdit(table)}
-                disabled={table.status !== 'FREE'}
-                className="flex-1 min-w-[120px] px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+                onClick={() => onReactivate(table)}
+                className="w-full px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors duration-200"
               >
-                Editar
+                ✓ Reactivar Mesa
+              </button>
+            )}
+            <p className="text-xs text-center text-gray-500">
+              Las mesas inactivas no se pueden editar ni usar en reservas
+            </p>
+          </div>
+        ) : (
+          /* Acciones para mesas activas */
+          <>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => onChangeStatus(table)}
+                className="flex-1 min-w-[120px] px-3 py-2 text-sm font-medium text-white bg-[#f74116] hover:bg-[#d63612] rounded-lg transition-colors duration-200"
+              >
+                Cambiar Estado
               </button>
               <button
-                onClick={() => onDelete(table)}
+                onClick={() => onChangeCapacity(table)}
                 disabled={table.status !== 'FREE'}
-                className="flex-1 min-w-[120px] px-3 py-2 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+                className="flex-1 min-w-[120px] px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
               >
-                Eliminar
+                Capacidad
               </button>
-            </>
-          )}
-        </div>
-        {table.status !== 'FREE' && (
-          <p className="mt-2 text-xs text-center text-gray-500">
-            * Solo se puede {isOwner ? 'editar, eliminar o cambiar capacidad' : 'cambiar capacidad'} de mesas en estado libre
-          </p>
+              {isOwner && (
+                <>
+                  <button
+                    onClick={() => onEdit(table)}
+                    disabled={table.status !== 'FREE'}
+                    className="flex-1 min-w-[120px] px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => onDelete(table)}
+                    disabled={table.status !== 'FREE'}
+                    className="flex-1 min-w-[120px] px-3 py-2 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+                  >
+                    Inactivar
+                  </button>
+                </>
+              )}
+            </div>
+            {table.status !== 'FREE' && (
+              <p className="mt-2 text-xs text-center text-gray-500">
+                * Solo se puede {isOwner ? 'editar, inactivar o cambiar capacidad' : 'cambiar capacidad'} de mesas en estado libre
+              </p>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -451,7 +492,7 @@ function ChangeCapacityModal({ isOpen, onClose, onSave, currentCapacity, isProce
   )
 }
 
-// Modal de confirmación de eliminación
+// Modal de confirmación de inactivación
 interface ConfirmDeleteModalProps {
   isOpen: boolean
   onClose: () => void
@@ -465,9 +506,9 @@ function ConfirmDeleteModal({ isOpen, onClose, onConfirm, tableCode, isDeleting 
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-sm overflow-hidden bg-white shadow-2xl rounded-2xl">
+      <div className="w-full max-w-md overflow-hidden bg-white shadow-2xl rounded-2xl">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
-          <h3 className="text-lg font-semibold text-gray-800">Confirmar eliminación</h3>
+          <h3 className="text-lg font-semibold text-gray-800">Inactivar Mesa</h3>
           <button
             className="text-2xl text-gray-500 hover:text-gray-700"
             onClick={onClose}
@@ -478,12 +519,23 @@ function ConfirmDeleteModal({ isOpen, onClose, onConfirm, tableCode, isDeleting 
           </button>
         </div>
 
-        <div className="px-6 py-6 space-y-3 text-center">
-          <div className="text-4xl">⚠️</div>
-          <p className="text-base text-gray-700">
-            ¿Estás seguro de que deseas eliminar la mesa <strong className="font-semibold text-gray-900">"{tableCode}"</strong>?
+        <div className="px-6 py-6 space-y-3">
+          <div className="flex justify-center text-4xl">
+            <svg className="w-16 h-16 text-orange-500" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <p className="text-base text-center text-gray-700">
+            ¿Desea inactivar la mesa <strong className="font-semibold text-gray-900">"{tableCode}"</strong>?
           </p>
-          <p className="text-sm italic text-gray-500">Esta acción no se puede deshacer.</p>
+          <div className="p-4 border border-blue-200 rounded-lg bg-blue-50">
+            <p className="text-sm text-blue-800">
+              🛈 <strong>La mesa no se eliminará permanentemente.</strong> Podrá reactivarla después si lo necesita.
+            </p>
+          </div>
+          <p className="text-sm text-center text-gray-600">
+            La mesa quedará marcada como <strong>Inactiva</strong> y no estará disponible para reservas.
+          </p>
         </div>
 
         <div className="flex items-center justify-center gap-3 px-6 py-4 border-t border-gray-200">
@@ -497,11 +549,77 @@ function ConfirmDeleteModal({ isOpen, onClose, onConfirm, tableCode, isDeleting 
           </button>
           <button
             type="button"
-            className="px-5 py-2 text-sm font-semibold text-white transition-colors bg-red-500 rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-5 py-2 text-sm font-semibold text-white transition-colors bg-orange-500 rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={onConfirm}
             disabled={isDeleting}
           >
-            {isDeleting ? 'Eliminando...' : 'Eliminar'}
+            {isDeleting ? 'Inactivando...' : 'Inactivar Mesa'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Modal de confirmación de reactivación
+interface ConfirmReactivateModalProps {
+  isOpen: boolean
+  onClose: () => void
+  onConfirm: () => void
+  tableCode: string
+  isReactivating: boolean
+}
+
+function ConfirmReactivateModal({ isOpen, onClose, onConfirm, tableCode, isReactivating }: ConfirmReactivateModalProps) {
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-md overflow-hidden bg-white shadow-2xl rounded-2xl">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-white">
+          <h3 className="text-lg font-semibold text-gray-800">Reactivar Mesa</h3>
+          <button
+            className="text-2xl text-gray-500 hover:text-gray-700"
+            onClick={onClose}
+            disabled={isReactivating}
+            type="button"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="px-6 py-6 space-y-3">
+          <div className="flex justify-center text-4xl">
+            <svg className="w-16 h-16 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <p className="text-base text-center text-gray-700">
+            ¿Desea reactivar la mesa <strong className="font-semibold text-gray-900">"{tableCode}"</strong>?
+          </p>
+          <div className="p-4 border border-green-200 rounded-lg bg-green-50">
+            <p className="text-sm text-green-800">
+              ✅ <strong>La mesa volverá a estar disponible</strong> en estado Libre y podrá usarse en reservas.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center gap-3 px-6 py-4 border-t border-gray-200">
+          <button
+            type="button"
+            className="px-4 py-2 text-sm font-semibold text-gray-700 transition-colors bg-gray-200 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={onClose}
+            disabled={isReactivating}
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            className="px-5 py-2 text-sm font-semibold text-white transition-colors bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={onConfirm}
+            disabled={isReactivating}
+          >
+            {isReactivating ? 'Reactivando...' : 'Reactivar Mesa'}
           </button>
         </div>
       </div>
@@ -537,6 +655,9 @@ function StatsCard({ stats, loading }: StatsCardProps) {
         </svg>
         Estadísticas de Ocupación
       </h2>
+      <p className="mb-4 text-sm text-gray-600">
+        * Las mesas inactivas no se incluyen en estas estadísticas
+      </p>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
         <div className="p-4 bg-white border border-gray-200 rounded-lg">
           <p className="mb-1 text-sm text-gray-600">Total</p>
@@ -582,6 +703,9 @@ function Tables() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [tableToDelete, setTableToDelete] = useState<Table | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [showReactivateModal, setShowReactivateModal] = useState(false)
+  const [tableToReactivate, setTableToReactivate] = useState<Table | null>(null)
+  const [isReactivating, setIsReactivating] = useState(false)
 
   const businessId = user?.businessId
   const userIsOwner = isOwner(user ?? null)
@@ -689,7 +813,7 @@ function Tables() {
     }
   }
 
-  // Eliminar mesa
+  // Inactivar mesa (soft delete)
   const handleDeleteConfirm = async () => {
     if (!businessId || !tableToDelete) return
 
@@ -697,15 +821,35 @@ function Tables() {
       setIsDeleting(true)
 
       await tableService.deleteTable(businessId, tableToDelete.id)
-      showSuccess('Mesa eliminada correctamente')
+      showSuccess('Mesa inactivada exitosamente')
 
       await loadTables()
       setShowDeleteModal(false)
       setTableToDelete(null)
     } catch (err) {
-      showErrorFromResponse(err, 'Error al eliminar la mesa')
+      showErrorFromResponse(err, 'Error al inactivar la mesa')
     } finally {
       setIsDeleting(false)
+    }
+  }
+
+  // Reactivar mesa
+  const handleReactivateConfirm = async () => {
+    if (!businessId || !tableToReactivate) return
+
+    try {
+      setIsReactivating(true)
+
+      await tableService.reactivateTable(businessId, tableToReactivate.id)
+      showSuccess('Mesa reactivada exitosamente')
+
+      await loadTables()
+      setShowReactivateModal(false)
+      setTableToReactivate(null)
+    } catch (err) {
+      showErrorFromResponse(err, 'Error al reactivar la mesa')
+    } finally {
+      setIsReactivating(false)
     }
   }
 
@@ -780,6 +924,7 @@ function Tables() {
                   <option value="FREE">Libres</option>
                   <option value="RESERVED">Reservadas</option>
                   <option value="OCCUPIED">Ocupadas</option>
+                  <option value="INACTIVE">Inactivas</option>
                 </select>
               </div>
             </div>
@@ -826,6 +971,10 @@ function Tables() {
                 onDelete={(t) => {
                   setTableToDelete(t)
                   setShowDeleteModal(true)
+                }}
+                onReactivate={(t) => {
+                  setTableToReactivate(t)
+                  setShowReactivateModal(true)
                 }}
                 onChangeStatus={(t) => {
                   setChangingStatusTable(t)
@@ -884,6 +1033,17 @@ function Tables() {
           onConfirm={handleDeleteConfirm}
           tableCode={tableToDelete?.tableCode || ''}
           isDeleting={isDeleting}
+        />
+
+        <ConfirmReactivateModal
+          isOpen={showReactivateModal}
+          onClose={() => {
+            setShowReactivateModal(false)
+            setTableToReactivate(null)
+          }}
+          onConfirm={handleReactivateConfirm}
+          tableCode={tableToReactivate?.tableCode || ''}
+          isReactivating={isReactivating}
         />
       </div>
     </div>

@@ -892,13 +892,15 @@ function Reservations() {
     }
   }, [businessId, showErrorFromResponse])
 
-  // Cargar mesas disponibles
+  // Cargar mesas disponibles (filtra las inactivas)
   const loadTables = useCallback(async () => {
     if (!businessId) return
 
     try {
       const data = await tableService.getTables(businessId)
-      setAvailableTables(data)
+      // Filtrar mesas inactivas ya que no se pueden usar en reservas
+      const activeTables = data.filter(table => table.status !== 'INACTIVE')
+      setAvailableTables(activeTables)
     } catch (err) {
       console.error('Error al cargar mesas:', err)
     }

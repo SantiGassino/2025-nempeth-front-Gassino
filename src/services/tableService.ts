@@ -1,7 +1,7 @@
 import api from './api';
 
 // Estados de mesa según la documentación
-export type TableStatus = 'FREE' | 'RESERVED' | 'OCCUPIED';
+export type TableStatus = 'FREE' | 'RESERVED' | 'OCCUPIED' | 'INACTIVE';
 
 // Interfaz principal de Mesa
 export interface Table {
@@ -194,9 +194,10 @@ export const tableService = {
   },
 
   /**
-   * Eliminar mesa
+   * Inactivar mesa (soft delete)
    * Permisos: Solo OWNER
    * Restricción: Solo si la mesa está en estado FREE
+   * La mesa cambia a estado INACTIVE en lugar de eliminarse
    */
   deleteTable: async (
     businessId: string,
@@ -214,8 +215,30 @@ export const tableService = {
   },
 
   /**
+   * Reactivar mesa inactiva
+   * Permisos: Solo OWNER
+   * Restricción: Solo si la mesa está en estado INACTIVE
+   * La mesa cambia automáticamente a estado FREE
+   */
+  reactivateTable: async (
+    businessId: string,
+    tableId: string,
+  ): Promise<{ message: string }> => {
+    try {
+      const response = await api.post(
+        `/businesses/${businessId}/tables/${tableId}/reactivate`,
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error al reactivar mesa:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Obtener estadísticas de ocupación
    * Permisos: OWNER y EMPLOYEE
+   * Nota: Las mesas INACTIVE no se incluyen en las estadísticas
    */
   getTableStats: async (businessId: string): Promise<TableStats> => {
     try {
