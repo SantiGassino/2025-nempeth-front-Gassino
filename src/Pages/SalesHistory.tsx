@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { salesManagementService, type SaleResponse } from '../services/salesManagementService'
 import { useAuth } from '../contexts/useAuth'
+import { useToast } from '../hooks/useToast'
 import { IoReceiptOutline, IoCalendarOutline, IoPersonOutline, IoCashOutline, IoEyeOutline, IoSwapVerticalOutline, IoFunnelOutline } from 'react-icons/io5'
 import LoadingScreen from '../components/LoadingScreen'
 
@@ -20,10 +21,10 @@ const getTableCode = (sale: SaleResponse): string | null => {
 
 function SalesHistory() {
   const { user } = useAuth()
+  const { showError } = useToast()
   const navigate = useNavigate()
   const [sales, setSales] = useState<SaleResponse[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [sortField, setSortField] = useState<SortField>('date')
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
   const [startDate, setStartDate] = useState<string>('')
@@ -37,16 +38,15 @@ function SalesHistory() {
 
     try {
       setLoading(true)
-      setError(null)
       const salesData = await salesManagementService.getAllSales(businessId)
       setSales(salesData)
     } catch (err) {
       console.error('Error cargando ventas:', err)
-      setError('Error al cargar el historial de ventas')
+      showError('Error al cargar el historial de ventas')
     } finally {
       setLoading(false)
     }
-  }, [businessId])
+  }, [businessId, showError])
 
   useEffect(() => {
     loadSales()
@@ -157,28 +157,6 @@ function SalesHistory() {
 
   if (loading) {
     return <LoadingScreen message="Cargando historial de ventas..." />
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-white via-[#fff1eb] to-white">
-        <div className="text-center">
-          <div className="mb-4 text-red-500">
-            <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <h2 className="mb-2 text-xl font-semibold text-gray-900">Error al cargar las ventas</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={loadSales}
-            className="px-4 py-2 bg-[#f74116] text-white rounded-lg hover:bg-[#f74116]/90 transition-colors"
-          >
-            Intentar de nuevo
-          </button>
-        </div>
-      </div>
-    )
   }
 
   return (

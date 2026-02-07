@@ -11,9 +11,9 @@ interface ProductWithCategory extends Omit<Product, 'categoryId'> {
 }
 import { salesService, type Sale, type SaleItem } from '../services/salesService'
 import { useAuth } from '../contexts/useAuth'
+import { useToast } from '../hooks/useToast'
 import LoadingScreen from '../components/LoadingScreen'
 import EmptyState from '../components/Products/EmptyState'
-import SuccessOperation from '../components/SuccesOperation'
 import { OrderProductCard } from '../components/Orders'
 import { IoFilterCircle, IoSearchOutline, IoAddCircle, IoCheckmarkCircle, IoCloseCircle, IoTrashOutline, IoPencilOutline, IoCartOutline, IoClose } from 'react-icons/io5'
 
@@ -29,10 +29,10 @@ const getTableCode = (sale: Sale): string | null => {
 
 function CreateOrder() {
   const { user } = useAuth()
+  const { showSuccess, showError } = useToast()
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<CategoryType[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [selectedCategoryFilters, setSelectedCategoryFilters] = useState<string[]>([])
   const [showFilterDropdown, setShowFilterDropdown] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -43,8 +43,6 @@ function CreateOrder() {
   const [selectedSaleItems, setSelectedSaleItems] = useState<SaleItem[]>([])
   const [isCreatingOrder, setIsCreatingOrder] = useState(false)
   const [isClosingOrder, setIsClosingOrder] = useState(false)
-  const [showSuccessModal, setShowSuccessModal] = useState(false)
-  const [successMessage, setSuccessMessage] = useState('')
   
   // Estados para editar items
   const [editingItem, setEditingItem] = useState<SaleItem | null>(null)
@@ -66,16 +64,15 @@ function CreateOrder() {
       setCategories(fetchedCategories)
     } catch (err) {
       console.error('Error cargando categorías:', err)
-      setError('Error al cargar las categorías')
+      showError('Error al cargar las categorías')
     }
-  }, [businessId])
+  }, [businessId, showError])
 
   const loadProducts = useCallback(async () => {
     if (!businessId) return
 
     try {
       setLoading(true)
-      setError(null)
       const fetchedProducts = await productService.getProducts(businessId)
       
       // Transformar los productos para extraer el categoryId del objeto category
@@ -87,11 +84,11 @@ function CreateOrder() {
       setProducts(transformedProducts)
     } catch (err) {
       console.error('Error cargando productos:', err)
-      setError('Error al cargar los productos')
+      showError('Error al cargar los productos')
     } finally {
       setLoading(false)
     }
-  }, [businessId])
+  }, [businessId, showError])
 
   const loadOpenSales = useCallback(async () => {
     if (!businessId) return
@@ -101,9 +98,9 @@ function CreateOrder() {
       setOpenSales(sales)
     } catch (err) {
       console.error('Error cargando órdenes abiertas:', err)
-      setError('Error al cargar las órdenes abiertas')
+      showError('Error al cargar las órdenes abiertas')
     }
-  }, [businessId])
+  }, [businessId, showError])
 
   const loadSaleItems = useCallback(async (saleId: string) => {
     if (!businessId) return
@@ -113,9 +110,9 @@ function CreateOrder() {
       setSelectedSaleItems(items)
     } catch (err) {
       console.error('Error cargando items de la orden:', err)
-      setError('Error al cargar los items de la orden')
+      showError('Error al cargar los items de la orden')
     }
-  }, [businessId])
+  }, [businessId, showError])
   
   // Actualizar la orden seleccionada cuando cambian las órdenes abiertas
   useEffect(() => {
@@ -179,31 +176,6 @@ function CreateOrder() {
     return <LoadingScreen message="Cargando catálogo de productos..." />
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-white via-[#fff1eb] to-white">
-        <div className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
-          <div className="p-8 text-center transition-all duration-200 bg-white border border-red-200 shadow-sm rounded-2xl hover:shadow-lg">
-            <div className="flex items-center justify-center w-20 h-20 mx-auto mb-6 bg-red-100 rounded-full">
-              <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h2 className="mb-3 text-xl font-bold text-gray-900">Error al cargar productos</h2>
-            <p className="mb-8 text-gray-600">{error}</p>
-            <button
-              onClick={loadProducts}
-              className="px-6 py-3 bg-[#f74116] text-white rounded-lg hover:bg-[#f74116]/90 transition-colors font-medium"
-              type="button"
-            >
-              Reintentar
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   // Funciones para manejar filtros de categorías
   const handleToggleCategoryFilter = (categoryId: string) => {
     setSelectedCategoryFilters(prev => 
@@ -229,7 +201,7 @@ function CreateOrder() {
   // Funciones para manejar órdenes
   const handleCreateNewOrder = async () => {
     if (!businessId) {
-      setError('No se pudo encontrar el ID del negocio')
+      showError('No se pudo encontrar el ID del negocio')
       return
     }
 
@@ -247,12 +219,11 @@ function CreateOrder() {
         setSelectedSale(newSale)
       }
       
-      setSuccessMessage('Nueva orden creada exitosamente')
-      setShowSuccessModal(true)
+      showSuccess('Nueva orden creada exitosamente')
       
     } catch (err) {
       console.error('Error creando orden:', err)
-      setError('Error al crear la orden')
+      showError('Error al crear la orden')
     } finally {
       setIsCreatingOrder(false)
     }
@@ -265,12 +236,12 @@ function CreateOrder() {
 
   const handleAddToOrder = async (product: Product, quantity: number) => {
     if (!selectedSale) {
-      setError('Debes seleccionar una orden primero')
+      showError('Debes seleccionar una orden primero')
       return
     }
 
     if (!businessId) {
-      setError('No se pudo encontrar el ID del negocio')
+      showError('No se pudo encontrar el ID del negocio')
       return
     }
 
@@ -298,25 +269,24 @@ function CreateOrder() {
         ? `${product.name} actualizado (cantidad total: ${totalQuantity})`
         : `${product.name} agregado a la orden`
       
-      setSuccessMessage(message)
-      setShowSuccessModal(true)
+      showSuccess(message)
       
     } catch (err) {
       console.error('Error agregando producto a la orden:', err)
-      setError('Error al agregar el producto a la orden')
+      showError('Error al agregar el producto a la orden')
     }
   }
 
   const handleCloseOrder = async () => {
     if (!selectedSale) return
     if (!businessId) {
-      setError('No se pudo encontrar el ID del negocio')
+      showError('No se pudo encontrar el ID del negocio')
       return
     }
 
     // Verificar si es una orden de mesa
     if (isTableOrder(selectedSale)) {
-      setError(`No se puede cerrar esta orden manualmente. Está asociada a la mesa ${getTableCode(selectedSale)}. La orden se cerrará automáticamente cuando la mesa quede libre.`)
+      showError(`No se puede cerrar esta orden manualmente. Está asociada a la mesa ${getTableCode(selectedSale)}. La orden se cerrará automáticamente cuando la mesa quede libre.`)
       return
     }
 
@@ -332,16 +302,15 @@ function CreateOrder() {
       // Recargar las órdenes abiertas
       await loadOpenSales()
       
-      setSuccessMessage('Orden cerrada exitosamente')
-      setShowSuccessModal(true)
+      showSuccess('Orden cerrada exitosamente')
       
     } catch (err: any) {
       console.error('Error cerrando orden:', err)
       // Capturar error 400 específico de órdenes de mesa
       if (err.response?.status === 400 && err.response?.data?.message) {
-        setError(err.response.data.message)
+        showError(err.response.data.message)
       } else {
-        setError('Error al cerrar la orden')
+        showError('Error al cerrar la orden')
       }
     } finally {
       setIsClosingOrder(false)
@@ -362,7 +331,7 @@ function CreateOrder() {
       const product = products.find(p => p.name === editingItem.productName)
       
       if (!product) {
-        setError('No se pudo encontrar el producto')
+        showError('No se pudo encontrar el producto')
         return
       }
 
@@ -377,12 +346,11 @@ function CreateOrder() {
       await loadSaleItems(selectedSale.id)
       
       setEditingItem(null)
-      setSuccessMessage('Cantidad actualizada')
-      setShowSuccessModal(true)
+      showSuccess('Cantidad actualizada')
       
     } catch (err) {
       console.error('Error actualizando item:', err)
-      setError('Error al actualizar el item')
+      showError('Error al actualizar el item')
     }
   }
 
@@ -398,7 +366,7 @@ function CreateOrder() {
       const product = products.find(p => p.name === deletingItem.productName)
       
       if (!product) {
-        setError('No se pudo encontrar el producto')
+        showError('No se pudo encontrar el producto')
         return
       }
 
@@ -413,12 +381,11 @@ function CreateOrder() {
       await loadSaleItems(selectedSale.id)
       
       setDeletingItem(null)
-      setSuccessMessage(`${deletingItem.productName} eliminado de la orden`)
-      setShowSuccessModal(true)
+      showSuccess(`${deletingItem.productName} eliminado de la orden`)
       
     } catch (err) {
       console.error('Error eliminando item:', err)
-      setError('Error al eliminar el item')
+      showError('Error al eliminar el item')
       setDeletingItem(null)
     }
   }
@@ -850,14 +817,6 @@ function CreateOrder() {
           )}
         </div>
       </div>
-
-      {/* Modal de éxito */}
-      {showSuccessModal && (
-        <SuccessOperation
-          message={successMessage}
-          onClose={() => setShowSuccessModal(false)}
-        />
-      )}
 
       {/* Modal de edición de cantidad */}
       {editingItem && (

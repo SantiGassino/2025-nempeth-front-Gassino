@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { salesManagementService, type SaleResponse } from '../services/salesManagementService'
 import { useAuth } from '../contexts/useAuth'
+import { useToast } from '../hooks/useToast'
 import LoadingScreen from '../components/LoadingScreen'
 import { 
   IoArrowBackOutline, 
@@ -26,9 +27,9 @@ function SaleDetails() {
   const { saleId } = useParams<{ saleId: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { showError } = useToast()
   const [sale, setSale] = useState<SaleResponse | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   const businessId = user?.businessId
 
@@ -37,16 +38,15 @@ function SaleDetails() {
 
     try {
       setLoading(true)
-      setError(null)
       const saleData = await salesManagementService.getSaleById(businessId, saleId)
       setSale(saleData)
     } catch (err) {
       console.error('Error cargando detalles de venta:', err)
-      setError('Error al cargar los detalles de la venta')
+      showError('Error al cargar los detalles de la venta')
     } finally {
       setLoading(false)
     }
-  }, [businessId, saleId])
+  }, [businessId, saleId, showError])
 
   useEffect(() => {
     loadSaleDetails()
@@ -77,51 +77,9 @@ function SaleDetails() {
     return <LoadingScreen message="Cargando detalles de la venta..." />
   }
 
-  if (error || !sale) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-white via-[#fff1eb] to-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-6">
-            <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-              <button
-                onClick={() => navigate('/sales-history')}
-                className="flex items-center gap-1 hover:text-[#f74116] transition-colors"
-              >
-                <span>Historial de Ventas</span>
-              </button>
-              <span>/</span>
-              <span className="text-red-600 font-medium">Error</span>
-            </nav>
-          </div>
-          
-          <div className="bg-white rounded-2xl shadow-sm border border-[#f74116]/10 p-8 text-center hover:shadow-lg transition-all duration-200">
-            <div className="w-20 h-20 mx-auto mb-6 bg-red-100 rounded-full flex items-center justify-center">
-              <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-3">Error al cargar la venta</h2>
-            <p className="text-gray-600 mb-8 max-w-md mx-auto">
-              {error || 'No se pudieron cargar los detalles de esta venta. Verifica que la venta existe e intenta nuevamente.'}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button
-                onClick={loadSaleDetails}
-                className="px-6 py-3 bg-[#f74116] text-white rounded-lg hover:bg-[#f74116]/90 transition-colors font-medium"
-              >
-                Reintentar
-              </button>
-              <button
-                onClick={() => navigate('/sales-history')}
-                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
-              >
-                Volver al Historial
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
+  if (!sale) {
+    navigate('/sales-history')
+    return null
   }
 
   return (

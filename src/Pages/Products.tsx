@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { productService, type Product } from '../services/productService'
 import { categoryService, type Category as CategoryType } from '../services/categoryService'
 import { useAuth } from '../contexts/useAuth'
+import { useToast } from '../hooks/useToast'
 import LoadingScreen from '../components/LoadingScreen'
 import EmptyState from '../components/Products/EmptyState'
 import DescriptionModal from '../components/Products/DescriptionModal'
@@ -78,11 +79,11 @@ function ConfirmDeleteModal({ isOpen, onClose, onConfirm, productName, isDeletin
 
 function Products() {
   const { user } = useAuth()
+  const { showSuccess, showError } = useToast()
   const [products, setProducts] = useState<Product[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [processing, setProcessing] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [productToDelete, setProductToDelete] = useState<Product | null>(null)
@@ -107,16 +108,15 @@ function Products() {
       setCategories(fetchedCategories)
     } catch (err) {
       console.error('Error cargando categorías:', err)
-      setError('Error al cargar las categorías')
+      showError('Error al cargar las categorías')
     }
-  }, [businessId])
+  }, [businessId, showError])
 
   const loadProducts = useCallback(async () => {
     if (!businessId) return
 
     try {
       setLoading(true)
-      setError(null)
       const fetchedProducts = await productService.getProducts(businessId)
       
       // Transformar los productos para extraer el categoryId del objeto category
@@ -128,11 +128,11 @@ function Products() {
       setProducts(transformedProducts)
     } catch (err) {
       console.error('Error cargando productos:', err)
-      setError('Error al cargar los productos')
+      showError('Error al cargar los productos')
     } finally {
       setLoading(false)
     }
-  }, [businessId])
+  }, [businessId, showError])
 
   // Filtrar productos basado en las categorías seleccionadas y búsqueda
   const filteredProducts = useMemo(() => {
@@ -187,30 +187,6 @@ function Products() {
     return <LoadingScreen message="Cargando productos..." />
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-white via-[#fff1eb] to-white">
-        <div className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
-          <div className="p-8 text-center transition-all duration-200 bg-white border border-red-200 shadow-sm rounded-2xl hover:shadow-lg">
-            <div className="flex items-center justify-center w-20 h-20 mx-auto mb-6 bg-red-100 rounded-full">
-              <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h2 className="mb-3 text-xl font-bold text-gray-900">Error al cargar productos</h2>
-            <p className="mb-8 text-gray-600">{error}</p>
-            <button
-              onClick={loadProducts}
-              className="px-6 py-3 bg-[#f74116] text-white rounded-lg hover:bg-[#f74116]/90 transition-colors font-medium"
-            >
-              Reintentar
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   const handleAddProduct = () => {
     setEditingProduct(null)
     setPrefilledProductName('')
@@ -240,16 +216,16 @@ function Products() {
 
     try {
       setIsDeleting(true)
-      setError(null)
       await productService.deleteProduct(businessId, productToDelete.id)
       // Recargar la lista para asegurar consistencia
       await loadProducts()
+      showSuccess('Producto eliminado exitosamente')
       // Cerrar modal
       setShowDeleteModal(false)
       setProductToDelete(null)
     } catch (err) {
       console.error('Error eliminando producto:', err)
-      setError('Error al eliminar el producto. Por favor, intenta nuevamente.')
+      showError('Error al eliminar el producto. Por favor, intenta nuevamente.')
     } finally {
       setIsDeleting(false)
     }
@@ -271,7 +247,6 @@ function Products() {
 
     try {
       setProcessing(true)
-      setError(null) // Limpiar errores previos
       
       if (productData.id) {
         // Editar producto existente
@@ -286,6 +261,7 @@ function Products() {
             categoryId: productData.categoryId!
           }
         )
+        showSuccess('Producto actualizado exitosamente')
       } else {
         // Agregar nuevo producto
         await productService.createProduct(businessId, {
@@ -295,6 +271,7 @@ function Products() {
           cost: productData.cost,
           categoryId: productData.categoryId!
         })
+        showSuccess('Producto creado exitosamente')
       }
       
       // Recargar la lista de productos para asegurar consistencia
@@ -306,7 +283,7 @@ function Products() {
       
     } catch (err) {
       console.error('Error guardando producto:', err)
-      setError('Error al guardar el producto. Por favor, intenta nuevamente.')
+      showError('Error al guardar el producto. Por favor, intenta nuevamente.')
       // NO cerrar el modal si hay error, para que el usuario pueda reintentar
     } finally {
       setProcessing(false)
@@ -342,9 +319,10 @@ function Products() {
     try {
       await categoryService.createCategory(businessId, category)
       await loadCategories() // Recargar categorías
+      showSuccess('Categoría creada exitosamente')
     } catch (err) {
       console.error('Error creando categoría:', err)
-      setError('Error al crear la categoría')
+      showError('Error al crear la categoría')
     }
   }
 
@@ -354,9 +332,10 @@ function Products() {
     try {
       await categoryService.updateCategory(businessId, id, category)
       await loadCategories() // Recargar categorías
+      showSuccess('Categoría actualizada exitosamente')
     } catch (err) {
       console.error('Error actualizando categoría:', err)
-      setError('Error al actualizar la categoría')
+      showError('Error al actualizar la categoría')
     }
   }
 
@@ -367,16 +346,17 @@ function Products() {
     const productsWithCategory = products.filter(product => product.categoryId === id)
     
     if (productsWithCategory.length > 0) {
-      setError(`No se puede eliminar la categoría porque tiene ${productsWithCategory.length} producto(s) asociado(s). Primero debe reasignar o eliminar estos productos.`)
+      showError(`No se puede eliminar la categoría porque tiene ${productsWithCategory.length} producto(s) asociado(s). Primero debe reasignar o eliminar estos productos.`)
       return
     }
     
     try {
       await categoryService.deleteCategory(businessId, id)
       await loadCategories() // Recargar categorías
+      showSuccess('Categoría eliminada exitosamente')
     } catch (err) {
       console.error('Error eliminando categoría:', err)
-      setError('Error al eliminar la categoría')
+      showError('Error al eliminar la categoría')
     }
   }
 
@@ -596,11 +576,9 @@ function Products() {
             setIsModalOpen(false)
             setEditingProduct(null)
             setPrefilledProductName('')
-            setError(null)
           }}
           onSave={handleSaveProduct}
           product={editingProduct}
-          error={error}
           categories={categories}
           prefilledName={prefilledProductName}
         />
@@ -622,16 +600,12 @@ function Products() {
 
         <CategoryManagementModal
           isOpen={showCategoryModal}
-          onClose={() => {
-            setShowCategoryModal(false)
-            setError(null)
-          }}
+          onClose={() => setShowCategoryModal(false)}
           categories={categories}
           onAddCategory={handleAddCategory}
           onEditCategory={handleEditCategory}
           onDeleteCategory={handleDeleteCategory}
           getProductCountByCategory={getProductCountByCategory}
-          error={error}
         />
 
         <MealSuggestionsModal
