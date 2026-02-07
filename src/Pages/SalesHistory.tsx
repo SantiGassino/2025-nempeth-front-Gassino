@@ -8,6 +8,16 @@ import LoadingScreen from '../components/LoadingScreen'
 type SortField = 'date' | 'amount'
 type SortOrder = 'asc' | 'desc'
 
+// Helper para identificar órdenes automáticas de mesa
+const isTableOrder = (sale: SaleResponse): boolean => {
+  return sale.table !== null
+}
+
+// Extraer código de mesa de órdenes automáticas
+const getTableCode = (sale: SaleResponse): string | null => {
+  return sale.table?.tableCode || null
+}
+
 function SalesHistory() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -88,6 +98,9 @@ function SalesHistory() {
     }
 
     return sales.filter(sale => {
+      // Si la orden está abierta (occurredAt null), siempre incluirla
+      if (!sale.occurredAt) return true
+      
       const saleDate = new Date(sale.occurredAt)
       const saleDateLocal = toLocalDate(saleDate)
       
@@ -113,9 +126,20 @@ function SalesHistory() {
   const getSortedSales = () => {
     const filteredSales = getFilteredSales()
     const sorted = [...filteredSales].sort((a, b) => {
+      // Priorizar órdenes abiertas (occurredAt null) siempre al principio
+      const aIsOpen = !a.occurredAt
+      const bIsOpen = !b.occurredAt
+      
+      if (aIsOpen && !bIsOpen) return -1
+      if (!aIsOpen && bIsOpen) return 1
+      
+      // Si ambas son abiertas, mantener orden original
+      if (aIsOpen && bIsOpen) return 0
+      
+      // Si ambas son cerradas, aplicar orden normal
       if (sortField === 'date') {
-        const dateA = new Date(a.occurredAt).getTime()
-        const dateB = new Date(b.occurredAt).getTime()
+        const dateA = new Date(a.occurredAt!).getTime()
+        const dateB = new Date(b.occurredAt!).getTime()
         return sortOrder === 'asc' ? dateA - dateB : dateB - dateA
       } else {
         return sortOrder === 'asc' 
@@ -190,9 +214,14 @@ function SalesHistory() {
                 <p className="text-3xl font-bold text-green-600">
                   {formatCurrency(getSortedSales().reduce((sum, sale) => sum + sale.totalAmount, 0))}
                 </p>
-                <p className="text-sm text-gray-500">
-                  {getSortedSales().length} {getSortedSales().length === 1 ? 'venta registrada' : 'ventas registradas'}
-                </p>
+                <div className="flex gap-4 mt-2 text-sm text-gray-600">
+                  <div>
+                    <span className="font-medium">📋 Manuales:</span> {getSortedSales().filter(s => !isTableOrder(s)).length}
+                  </div>
+                  <div>
+                    <span className="font-medium">🪑 Por Mesa:</span> {getSortedSales().filter(s => isTableOrder(s)).length}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -320,30 +349,62 @@ function SalesHistory() {
                 </p>
               </div>
               
-              {getSortedSales().map((sale) => (
+              {getSortedSales().map((sale) => {
+                const isAutomatic = isTableOrder(sale)
+                const tableCode = getTableCode(sale)
+                
+                return (
                 <div
                   key={sale.id}
                   className="group p-5 bg-gray-50/50 rounded-xl hover:bg-gray-50 transition-all duration-200 border border-transparent hover:border-gray-200 hover:shadow-sm transform hover:scale-[1.01]"
                 >
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div className="flex items-center gap-4 flex-1">
-                      <div className="w-12 h-12 bg-gradient-to-br from-[#f74116]/10 to-[#f74116]/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <IoReceiptOutline className="w-6 h-6 text-[#f74116]" />
+                      <div className={`w-12 h-12 bg-gradient-to-br rounded-xl flex items-center justify-center flex-shrink-0 ${
+                        isAutomatic 
+                          ? 'from-blue-100 to-blue-200' 
+                          : 'from-[#f74116]/10 to-[#f74116]/20'
+                      }`}>
+                        {isAutomatic ? (
+                          <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        ) : (
+                          <IoReceiptOutline className="w-6 h-6 text-[#f74116]" />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="text-lg font-semibold text-gray-900">
-                            Venta #{sale.id.substring(0, 8)}
+                            {isAutomatic && tableCode ? `Mesa ${tableCode} -` : ''} Venta #{sale.id.substring(0, 8)}
                           </h3>
+                          {isAutomatic ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded-full border border-blue-200">
+                              🪑 Orden Automática
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-[#f74116] bg-[#f74116]/10 rounded-full">
+                              📋 Orden Manual
+                            </span>
+                          )}
                           <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-[#f74116] bg-[#f74116]/10 rounded-full">
                             {sale.items.length} {sale.items.length === 1 ? 'producto' : 'productos'}
                           </span>
                         </div>
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-gray-600">
-                          <div className="flex items-center gap-1">
-                            <IoCalendarOutline className="w-4 h-4" />
-                            <span>{formatDate(sale.occurredAt)}</span>
-                          </div>
+                          {sale.occurredAt ? (
+                            <div className="flex items-center gap-1">
+                              <IoCalendarOutline className="w-4 h-4" />
+                              <span>{formatDate(sale.occurredAt)}</span>
+                            </div>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold text-amber-700 bg-amber-100 rounded-full border border-amber-300">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              Orden Abierta
+                            </span>
+                          )}
                           <span className="hidden sm:inline text-gray-400">•</span>
                           <div className="flex items-center gap-1">
                             <IoPersonOutline className="w-4 h-4" />
@@ -391,7 +452,8 @@ function SalesHistory() {
                     </div>
                   </div>
                 </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>

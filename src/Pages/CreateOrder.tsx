@@ -17,6 +17,16 @@ import SuccessOperation from '../components/SuccesOperation'
 import { OrderProductCard } from '../components/Orders'
 import { IoFilterCircle, IoSearchOutline, IoAddCircle, IoCheckmarkCircle, IoCloseCircle, IoTrashOutline, IoPencilOutline, IoCartOutline, IoClose } from 'react-icons/io5'
 
+// Helper para identificar órdenes automáticas de mesa
+const isTableOrder = (sale: Sale): boolean => {
+  return sale.table !== null
+}
+
+// Extraer código de mesa de órdenes automáticas
+const getTableCode = (sale: Sale): string | null => {
+  return sale.table?.tableCode || null
+}
+
 function CreateOrder() {
   const { user } = useAuth()
   const [products, setProducts] = useState<Product[]>([])
@@ -304,6 +314,12 @@ function CreateOrder() {
       return
     }
 
+    // Verificar si es una orden de mesa
+    if (isTableOrder(selectedSale)) {
+      setError(`No se puede cerrar esta orden manualmente. Está asociada a la mesa ${getTableCode(selectedSale)}. La orden se cerrará automáticamente cuando la mesa quede libre.`)
+      return
+    }
+
     setIsClosingOrder(true)
     
     try {
@@ -319,9 +335,14 @@ function CreateOrder() {
       setSuccessMessage('Orden cerrada exitosamente')
       setShowSuccessModal(true)
       
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error cerrando orden:', err)
-      setError('Error al cerrar la orden')
+      // Capturar error 400 específico de órdenes de mesa
+      if (err.response?.status === 400 && err.response?.data?.message) {
+        setError(err.response.data.message)
+      } else {
+        setError('Error al cerrar la orden')
+      }
     } finally {
       setIsClosingOrder(false)
     }
@@ -450,6 +471,9 @@ function CreateOrder() {
                   return sum + (item.lineTotal || 0)
                 }, 0) || 0
                 
+                const isAutomatic = isTableOrder(sale)
+                const tableCode = getTableCode(sale)
+                
                 return (
                   <button
                     key={sale.id}
@@ -457,20 +481,36 @@ function CreateOrder() {
                     className={`
                       p-4 rounded-lg border-2 text-left transition-all duration-200
                       ${selectedSale?.id === sale.id 
-                        ? 'border-[#f74116] bg-[#f74116]/5 shadow-md' 
+                        ? isAutomatic
+                          ? 'border-blue-500 bg-blue-50 shadow-md'
+                          : 'border-[#f74116] bg-[#f74116]/5 shadow-md' 
                         : 'border-gray-200 hover:border-[#f74116]/50 hover:shadow-sm'
                       }
                     `}
                     type="button"
                   >
                     <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h3 className="font-semibold text-gray-900">
-                          Orden #{sale.id.slice(0, 8)}
-                        </h3>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          {isAutomatic && (
+                            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          )}
+                          <h3 className="font-semibold text-gray-900">
+                            {isAutomatic && tableCode ? `Mesa ${tableCode}` : `Orden #${sale.id.slice(0, 8)}`}
+                          </h3>
+                        </div>
+                        {isAutomatic && (
+                          <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium text-blue-700 bg-blue-100 rounded-full">
+                            🪑 Automática
+                          </span>
+                        )}
                       </div>
                       {selectedSale?.id === sale.id && (
-                        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-[#f74116]">
+                        <span className={`flex items-center justify-center w-6 h-6 rounded-full ${
+                          isAutomatic ? 'bg-blue-500' : 'bg-[#f74116]'
+                        }`}>
                           <IoCheckmarkCircle className="text-white" />
                         </span>
                       )}
@@ -612,9 +652,28 @@ function CreateOrder() {
 
                   {/* Footer con botón de cerrar orden */}
                   <div className="border-t border-gray-200 p-6 bg-gray-50">
+                    {selectedSale && isTableOrder(selectedSale) && (
+                      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                          </svg>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-blue-900">Orden automática</p>
+                            <p className="text-xs text-blue-700 mt-1">
+                              Esta orden se cerrará automáticamente cuando la mesa {getTableCode(selectedSale)} quede libre.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     <button
                       onClick={handleCloseOrder}
-                      disabled={isClosingOrder || selectedSaleItems.length === 0}
+                      disabled={
+                        isClosingOrder || 
+                        selectedSaleItems.length === 0 || 
+                        (selectedSale && isTableOrder(selectedSale))
+                      }
                       className="w-full flex items-center justify-center gap-2 bg-green-600 text-white px-6 py-4 rounded-lg hover:bg-green-700 transition-colors font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                       type="button"
                     >
