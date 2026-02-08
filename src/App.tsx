@@ -1,4 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 import { AuthProvider } from './contexts/AuthContext'
 import { useAuth } from './contexts/useAuth'
 import Analytics from './Pages/Analytics'
@@ -17,6 +19,9 @@ import CreateGoal from './Pages/CreateGoal'
 import GoalDetails from './Pages/GoalDetails'
 import Ranking from './Pages/Ranking'
 import InternalRanking from './Pages/InternalRanking'
+import Tables from './Pages/Tables'
+import Reservations from './Pages/Reservations'
+import ReservationHistory from './Pages/ReservationHistory'
 import Layout from './components/Layout'
 import UnauthenticatedGuard from './guards/UnauthenticatedGuard'
 import OwnerGuard from './guards/OwnerGuard'
@@ -127,6 +132,39 @@ function AppRoutes() {
       />
 
       <Route
+        path="/tables"
+        element={
+          <OwnerOrActiveEmployeeGuard>
+            <Layout>
+              <Tables />
+            </Layout>
+          </OwnerOrActiveEmployeeGuard>
+        }
+      />
+
+      <Route
+        path="/reservations"
+        element={
+          <OwnerOrActiveEmployeeGuard>
+            <Layout>
+              <Reservations />
+            </Layout>
+          </OwnerOrActiveEmployeeGuard>
+        }
+      />
+
+      <Route
+        path="/reservations/history"
+        element={
+          <OwnerGuard>
+            <Layout>
+              <ReservationHistory />
+            </Layout>
+          </OwnerGuard>
+        }
+      />
+
+      <Route
         path="/business"
         element={
           <OwnerGuard>
@@ -213,6 +251,18 @@ function App() {
     <AuthProvider>
       <Router>
         <AppRoutes />
+        <ToastContainer
+          position="top-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
       </Router>
     </AuthProvider>
   )

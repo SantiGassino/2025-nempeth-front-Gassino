@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { salesManagementService, type SaleResponse } from '../services/salesManagementService'
 import { useAuth } from '../contexts/useAuth'
+import { useToast } from '../hooks/useToast'
 import LoadingScreen from '../components/LoadingScreen'
 import { 
   IoArrowBackOutline, 
@@ -12,13 +13,23 @@ import {
   IoList
 } from 'react-icons/io5'
 
+// Helper para identificar órdenes automáticas de mesa
+const isTableOrder = (sale: SaleResponse): boolean => {
+  return sale.table !== null
+}
+
+// Extraer código de mesa de órdenes automáticas
+const getTableCode = (sale: SaleResponse): string | null => {
+  return sale.table?.tableCode || null
+}
+
 function SaleDetails() {
   const { saleId } = useParams<{ saleId: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { showError } = useToast()
   const [sale, setSale] = useState<SaleResponse | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   const businessId = user?.businessId
 
@@ -27,16 +38,15 @@ function SaleDetails() {
 
     try {
       setLoading(true)
-      setError(null)
       const saleData = await salesManagementService.getSaleById(businessId, saleId)
       setSale(saleData)
     } catch (err) {
       console.error('Error cargando detalles de venta:', err)
-      setError('Error al cargar los detalles de la venta')
+      showError('Error al cargar los detalles de la venta')
     } finally {
       setLoading(false)
     }
-  }, [businessId, saleId])
+  }, [businessId, saleId, showError])
 
   useEffect(() => {
     loadSaleDetails()
@@ -67,51 +77,9 @@ function SaleDetails() {
     return <LoadingScreen message="Cargando detalles de la venta..." />
   }
 
-  if (error || !sale) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-white via-[#fff1eb] to-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-6">
-            <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-              <button
-                onClick={() => navigate('/sales-history')}
-                className="flex items-center gap-1 hover:text-[#f74116] transition-colors"
-              >
-                <span>Historial de Ventas</span>
-              </button>
-              <span>/</span>
-              <span className="text-red-600 font-medium">Error</span>
-            </nav>
-          </div>
-          
-          <div className="bg-white rounded-2xl shadow-sm border border-[#f74116]/10 p-8 text-center hover:shadow-lg transition-all duration-200">
-            <div className="w-20 h-20 mx-auto mb-6 bg-red-100 rounded-full flex items-center justify-center">
-              <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-3">Error al cargar la venta</h2>
-            <p className="text-gray-600 mb-8 max-w-md mx-auto">
-              {error || 'No se pudieron cargar los detalles de esta venta. Verifica que la venta existe e intenta nuevamente.'}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button
-                onClick={loadSaleDetails}
-                className="px-6 py-3 bg-[#f74116] text-white rounded-lg hover:bg-[#f74116]/90 transition-colors font-medium"
-              >
-                Reintentar
-              </button>
-              <button
-                onClick={() => navigate('/sales-history')}
-                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
-              >
-                Volver al Historial
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
+  if (!sale) {
+    navigate('/sales-history')
+    return null
   }
 
   return (
@@ -129,35 +97,94 @@ function SaleDetails() {
           </button>
           
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl mb-2">
-              Venta #{sale.id.substring(0, 8)}
-            </h1>
-            <p className="text-gray-600">Detalle completo de la transacción</p>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+                {isTableOrder(sale) && getTableCode(sale) 
+                  ? `Mesa ${getTableCode(sale)} - ` 
+                  : ''}Venta #{sale.id.substring(0, 8)}
+              </h1>
+              {isTableOrder(sale) && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 text-sm font-medium text-blue-700 bg-blue-100 rounded-full border border-blue-200">
+                  🪑 Orden Automática
+                </span>
+              )}
+            </div>
+            <p className="text-gray-600">
+              {isTableOrder(sale) 
+                ? 'Orden creada automáticamente al ocupar la mesa' 
+                : 'Detalle completo de la transacción'}
+            </p>
           </div>
         </div>
 
         {/* Sale Summary Card */}
         <div className="bg-white rounded-2xl shadow-sm border border-[#f74116]/10 p-6 mb-6 hover:shadow-lg transition-all duration-200">
+          {/* Badge de tipo de orden */}
+          {isTableOrder(sale) && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-sm text-blue-800">
+                  <strong>Orden automática de mesa.</strong> Esta orden se creó cuando la mesa <strong>{getTableCode(sale)}</strong> cambió a estado OCUPADO
+                  {sale.occurredAt ? ' y se cerró automáticamente cuando la mesa quedó libre.' : ' y se cerrará automáticamente cuando la mesa quede libre.'}
+                </p>
+              </div>
+            </div>
+          )}
+          
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-gradient-to-br from-[#f74116]/10 to-[#f74116]/20 rounded-2xl flex items-center justify-center flex-shrink-0">
-                <IoReceiptOutline className="w-8 h-8 text-[#f74116]" />
+              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0 ${
+                isTableOrder(sale)
+                  ? 'bg-gradient-to-br from-blue-100 to-blue-200'
+                  : 'bg-gradient-to-br from-[#f74116]/10 to-[#f74116]/20'
+              }`}>
+                {isTableOrder(sale) ? (
+                  <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                ) : (
+                  <IoReceiptOutline className="w-8 h-8 text-[#f74116]" />
+                )}
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-900 mb-2">Resumen de la Venta</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                   <div className="flex items-center gap-2">
-                    <IoCalendarOutline className="w-4 h-4 text-gray-500" />
-                    <div>
-                      <span className="text-gray-600 font-medium">Fecha: </span>
-                      <span className="text-gray-900">{formatDate(sale.occurredAt)}</span>
-                    </div>
+                    {sale.occurredAt ? (
+                      <>
+                        <IoCalendarOutline className="w-4 h-4 text-gray-500" />
+                        <div>
+                          <span className="text-gray-600 font-medium">Fecha: </span>
+                          <span className="text-gray-900">{formatDate(sale.occurredAt)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold text-amber-700 bg-amber-100 rounded-full border border-amber-300">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Orden Abierta
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <IoPersonOutline className="w-4 h-4 text-gray-500" />
                     <div>
-                      <span className="text-gray-600 font-medium">Vendedor: </span>
-                      <span className="text-gray-900">{sale.createdByUserName}</span>
+                      <span className="text-gray-600 font-medium">
+                        {isTableOrder(sale) ? 'Sistema:' : 'Vendedor:'}
+                      </span>
+                      <span className={`ml-1 ${
+                        isTableOrder(sale) 
+                          ? 'text-blue-700 font-semibold' 
+                          : 'text-gray-900'
+                      }`}>
+                        {isTableOrder(sale) 
+                          ? `Mesa ${getTableCode(sale)}` 
+                          : sale.createdByUserName}
+                      </span>
                     </div>
                   </div>
                 </div>

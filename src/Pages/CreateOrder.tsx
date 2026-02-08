@@ -11,18 +11,28 @@ interface ProductWithCategory extends Omit<Product, 'categoryId'> {
 }
 import { salesService, type Sale, type SaleItem } from '../services/salesService'
 import { useAuth } from '../contexts/useAuth'
+import { useToast } from '../hooks/useToast'
 import LoadingScreen from '../components/LoadingScreen'
 import EmptyState from '../components/Products/EmptyState'
-import SuccessOperation from '../components/SuccesOperation'
 import { OrderProductCard } from '../components/Orders'
-import { IoFilterCircle, IoSearchOutline, IoAddCircle, IoCheckmarkCircle, IoCloseCircle, IoTrashOutline, IoPencilOutline, IoCartOutline, IoClose } from 'react-icons/io5'
+import { IoFilterCircle, IoSearchOutline, IoAddCircle, IoCheckmarkCircle, IoCloseCircle, IoTrashOutline, IoPencilOutline, IoCartOutline, IoClose, IoWarning } from 'react-icons/io5'
+
+// Helper para identificar órdenes automáticas de mesa
+const isTableOrder = (sale: Sale): boolean => {
+  return sale.table !== null
+}
+
+// Extraer código de mesa de órdenes automáticas
+const getTableCode = (sale: Sale): string | null => {
+  return sale.table?.tableCode || null
+}
 
 function CreateOrder() {
   const { user } = useAuth()
+  const { showSuccess, showError } = useToast()
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<CategoryType[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [selectedCategoryFilters, setSelectedCategoryFilters] = useState<string[]>([])
   const [showFilterDropdown, setShowFilterDropdown] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -33,8 +43,6 @@ function CreateOrder() {
   const [selectedSaleItems, setSelectedSaleItems] = useState<SaleItem[]>([])
   const [isCreatingOrder, setIsCreatingOrder] = useState(false)
   const [isClosingOrder, setIsClosingOrder] = useState(false)
-  const [showSuccessModal, setShowSuccessModal] = useState(false)
-  const [successMessage, setSuccessMessage] = useState('')
   
   // Estados para editar items
   const [editingItem, setEditingItem] = useState<SaleItem | null>(null)
@@ -45,6 +53,10 @@ function CreateOrder() {
   
   // Estado para controlar el carrito
   const [isCartOpen, setIsCartOpen] = useState(false)
+  
+  // Estado para eliminar orden
+  const [isDeletingSale, setIsDeletingSale] = useState(false)
+  const [showDeleteSaleModal, setShowDeleteSaleModal] = useState(false)
 
   const businessId = user?.businessId
 
@@ -56,16 +68,15 @@ function CreateOrder() {
       setCategories(fetchedCategories)
     } catch (err) {
       console.error('Error cargando categorías:', err)
-      setError('Error al cargar las categorías')
+      showError('Error al cargar las categorías')
     }
-  }, [businessId])
+  }, [businessId, showError])
 
   const loadProducts = useCallback(async () => {
     if (!businessId) return
 
     try {
       setLoading(true)
-      setError(null)
       const fetchedProducts = await productService.getProducts(businessId)
       
       // Transformar los productos para extraer el categoryId del objeto category
@@ -77,11 +88,11 @@ function CreateOrder() {
       setProducts(transformedProducts)
     } catch (err) {
       console.error('Error cargando productos:', err)
-      setError('Error al cargar los productos')
+      showError('Error al cargar los productos')
     } finally {
       setLoading(false)
     }
-  }, [businessId])
+  }, [businessId, showError])
 
   const loadOpenSales = useCallback(async () => {
     if (!businessId) return
@@ -91,9 +102,9 @@ function CreateOrder() {
       setOpenSales(sales)
     } catch (err) {
       console.error('Error cargando órdenes abiertas:', err)
-      setError('Error al cargar las órdenes abiertas')
+      showError('Error al cargar las órdenes abiertas')
     }
-  }, [businessId])
+  }, [businessId, showError])
 
   const loadSaleItems = useCallback(async (saleId: string) => {
     if (!businessId) return
@@ -103,9 +114,9 @@ function CreateOrder() {
       setSelectedSaleItems(items)
     } catch (err) {
       console.error('Error cargando items de la orden:', err)
-      setError('Error al cargar los items de la orden')
+      showError('Error al cargar los items de la orden')
     }
-  }, [businessId])
+  }, [businessId, showError])
   
   // Actualizar la orden seleccionada cuando cambian las órdenes abiertas
   useEffect(() => {
@@ -169,31 +180,6 @@ function CreateOrder() {
     return <LoadingScreen message="Cargando catálogo de productos..." />
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-white via-[#fff1eb] to-white">
-        <div className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
-          <div className="p-8 text-center transition-all duration-200 bg-white border border-red-200 shadow-sm rounded-2xl hover:shadow-lg">
-            <div className="flex items-center justify-center w-20 h-20 mx-auto mb-6 bg-red-100 rounded-full">
-              <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h2 className="mb-3 text-xl font-bold text-gray-900">Error al cargar productos</h2>
-            <p className="mb-8 text-gray-600">{error}</p>
-            <button
-              onClick={loadProducts}
-              className="px-6 py-3 bg-[#f74116] text-white rounded-lg hover:bg-[#f74116]/90 transition-colors font-medium"
-              type="button"
-            >
-              Reintentar
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   // Funciones para manejar filtros de categorías
   const handleToggleCategoryFilter = (categoryId: string) => {
     setSelectedCategoryFilters(prev => 
@@ -219,7 +205,7 @@ function CreateOrder() {
   // Funciones para manejar órdenes
   const handleCreateNewOrder = async () => {
     if (!businessId) {
-      setError('No se pudo encontrar el ID del negocio')
+      showError('No se pudo encontrar el ID del negocio')
       return
     }
 
@@ -237,12 +223,11 @@ function CreateOrder() {
         setSelectedSale(newSale)
       }
       
-      setSuccessMessage('Nueva orden creada exitosamente')
-      setShowSuccessModal(true)
+      showSuccess('Nueva orden creada exitosamente')
       
     } catch (err) {
       console.error('Error creando orden:', err)
-      setError('Error al crear la orden')
+      showError('Error al crear la orden')
     } finally {
       setIsCreatingOrder(false)
     }
@@ -255,12 +240,12 @@ function CreateOrder() {
 
   const handleAddToOrder = async (product: Product, quantity: number) => {
     if (!selectedSale) {
-      setError('Debes seleccionar una orden primero')
+      showError('Debes seleccionar una orden primero')
       return
     }
 
     if (!businessId) {
-      setError('No se pudo encontrar el ID del negocio')
+      showError('No se pudo encontrar el ID del negocio')
       return
     }
 
@@ -288,19 +273,24 @@ function CreateOrder() {
         ? `${product.name} actualizado (cantidad total: ${totalQuantity})`
         : `${product.name} agregado a la orden`
       
-      setSuccessMessage(message)
-      setShowSuccessModal(true)
+      showSuccess(message)
       
     } catch (err) {
       console.error('Error agregando producto a la orden:', err)
-      setError('Error al agregar el producto a la orden')
+      showError('Error al agregar el producto a la orden')
     }
   }
 
   const handleCloseOrder = async () => {
     if (!selectedSale) return
     if (!businessId) {
-      setError('No se pudo encontrar el ID del negocio')
+      showError('No se pudo encontrar el ID del negocio')
+      return
+    }
+
+    // Verificar si es una orden de mesa
+    if (isTableOrder(selectedSale)) {
+      showError(`No se puede cerrar esta orden manualmente. Está asociada a la mesa ${getTableCode(selectedSale)}. La orden se cerrará automáticamente cuando la mesa quede libre.`)
       return
     }
 
@@ -316,12 +306,16 @@ function CreateOrder() {
       // Recargar las órdenes abiertas
       await loadOpenSales()
       
-      setSuccessMessage('Orden cerrada exitosamente')
-      setShowSuccessModal(true)
+      showSuccess('Orden cerrada exitosamente')
       
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error cerrando orden:', err)
-      setError('Error al cerrar la orden')
+      // Capturar error 400 específico de órdenes de mesa
+      if (err.response?.status === 400 && err.response?.data?.message) {
+        showError(err.response.data.message)
+      } else {
+        showError('Error al cerrar la orden')
+      }
     } finally {
       setIsClosingOrder(false)
     }
@@ -341,7 +335,7 @@ function CreateOrder() {
       const product = products.find(p => p.name === editingItem.productName)
       
       if (!product) {
-        setError('No se pudo encontrar el producto')
+        showError('No se pudo encontrar el producto')
         return
       }
 
@@ -356,12 +350,11 @@ function CreateOrder() {
       await loadSaleItems(selectedSale.id)
       
       setEditingItem(null)
-      setSuccessMessage('Cantidad actualizada')
-      setShowSuccessModal(true)
+      showSuccess('Cantidad actualizada')
       
     } catch (err) {
       console.error('Error actualizando item:', err)
-      setError('Error al actualizar el item')
+      showError('Error al actualizar el item')
     }
   }
 
@@ -377,7 +370,7 @@ function CreateOrder() {
       const product = products.find(p => p.name === deletingItem.productName)
       
       if (!product) {
-        setError('No se pudo encontrar el producto')
+        showError('No se pudo encontrar el producto')
         return
       }
 
@@ -392,13 +385,55 @@ function CreateOrder() {
       await loadSaleItems(selectedSale.id)
       
       setDeletingItem(null)
-      setSuccessMessage(`${deletingItem.productName} eliminado de la orden`)
-      setShowSuccessModal(true)
+      showSuccess(`${deletingItem.productName} eliminado de la orden`)
       
     } catch (err) {
       console.error('Error eliminando item:', err)
-      setError('Error al eliminar el item')
+      showError('Error al eliminar el item')
       setDeletingItem(null)
+    }
+  }
+
+  const handleDeleteSale = () => {
+    if (!selectedSale) return
+    
+    // Verificar si es una orden de mesa
+    if (isTableOrder(selectedSale)) {
+      showError(`No se puede eliminar esta orden. Está asociada a la mesa ${getTableCode(selectedSale)}. Libere la mesa primero para cerrar la orden automáticamente.`)
+      return
+    }
+    
+    setShowDeleteSaleModal(true)
+  }
+
+  const confirmDeleteSale = async () => {
+    if (!selectedSale || !businessId) return
+    
+    setIsDeletingSale(true)
+    
+    try {
+      await salesService.deleteSale(businessId, selectedSale.id)
+      
+      // Limpiar la orden seleccionada y sus items
+      setSelectedSale(null)
+      setSelectedSaleItems([])
+      setShowDeleteSaleModal(false)
+      
+      // Recargar las órdenes abiertas
+      await loadOpenSales()
+      
+      showSuccess('Orden eliminada exitosamente')
+      
+    } catch (err: any) {
+      console.error('Error eliminando orden:', err)
+      // Capturar errores específicos del backend
+      if (err.response?.status === 400 && err.response?.data?.message) {
+        showError(err.response.data.message)
+      } else {
+        showError('Error al eliminar la orden')
+      }
+    } finally {
+      setIsDeletingSale(false)
     }
   }
 
@@ -410,12 +445,12 @@ function CreateOrder() {
         <div className="mb-8">
           <div className="inline-flex items-center gap-2 rounded-full bg-[#f74116]/10 px-4 py-2 text-sm font-semibold text-[#f74116] mb-4">
             <span className="h-2 w-2 rounded-full bg-[#f74116]" />
-            Gestión de Ventas - V2
+            Gestión de Ventas
           </div>
           <div className="flex items-center justify-between">
             <div>
               <h1 className="mb-2 text-3xl font-bold text-gray-900 sm:text-4xl">
-                Crear Orden de Venta (V2)
+                Crear Orden de Venta
               </h1>
               <p className="text-gray-600">Gestiona órdenes abiertas y agrega productos</p>
             </div>
@@ -450,6 +485,9 @@ function CreateOrder() {
                   return sum + (item.lineTotal || 0)
                 }, 0) || 0
                 
+                const isAutomatic = isTableOrder(sale)
+                const tableCode = getTableCode(sale)
+                
                 return (
                   <button
                     key={sale.id}
@@ -457,25 +495,41 @@ function CreateOrder() {
                     className={`
                       p-4 rounded-lg border-2 text-left transition-all duration-200
                       ${selectedSale?.id === sale.id 
-                        ? 'border-[#f74116] bg-[#f74116]/5 shadow-md' 
+                        ? isAutomatic
+                          ? 'border-blue-500 bg-blue-50 shadow-md'
+                          : 'border-[#f74116] bg-[#f74116]/5 shadow-md' 
                         : 'border-gray-200 hover:border-[#f74116]/50 hover:shadow-sm'
                       }
                     `}
                     type="button"
                   >
                     <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h3 className="font-semibold text-gray-900">
-                          Orden #{sale.id.slice(0, 8)}
-                        </h3>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          {isAutomatic && (
+                            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          )}
+                          <h3 className="font-semibold text-gray-900">
+                            {isAutomatic && tableCode ? `Mesa ${tableCode}` : `Orden #${sale.id.slice(0, 8)}`}
+                          </h3>
+                        </div>
+                        {isAutomatic && (
+                          <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium text-blue-700 bg-blue-100 rounded-full">
+                            🪑 Automática
+                          </span>
+                        )}
                       </div>
                       {selectedSale?.id === sale.id && (
-                        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-[#f74116]">
+                        <span className={`flex items-center justify-center w-6 h-6 rounded-full ${
+                          isAutomatic ? 'bg-blue-500' : 'bg-[#f74116]'
+                        }`}>
                           <IoCheckmarkCircle className="text-white" />
                         </span>
                       )}
                     </div>
-                    <div className="mt-3 pt-3 border-t border-gray-100">
+                    <div className="pt-3 mt-3 border-t border-gray-100">
                       <p className="text-sm text-gray-600">
                         Total: <span className="font-semibold text-gray-900">${saleTotal.toFixed(2)}</span>
                       </p>
@@ -536,13 +590,13 @@ function CreateOrder() {
                       </div>
                       <button
                         onClick={() => setIsCartOpen(false)}
-                        className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                        className="p-2 transition-colors rounded-lg hover:bg-white/10"
                         type="button"
                       >
                         <IoClose className="w-6 h-6" />
                       </button>
                     </div>
-                    <div className="bg-white/10 rounded-lg p-3">
+                    <div className="p-3 rounded-lg bg-white/10">
                       <div className="flex items-center justify-between">
                         <span className="text-sm">Total de la Orden</span>
                         <span className="text-2xl font-bold">${totalCalculado.toFixed(2)}</span>
@@ -551,14 +605,14 @@ function CreateOrder() {
                   </div>
 
                   {/* Lista de items */}
-                  <div className="flex-1 overflow-y-auto p-6">
+                  <div className="flex-1 p-6 overflow-y-auto">
                     {selectedSaleItems.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-full text-center">
-                        <div className="w-20 h-20 mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                        <div className="flex items-center justify-center w-20 h-20 mb-4 bg-gray-100 rounded-full">
                           <IoCartOutline className="w-10 h-10 text-gray-400" />
                         </div>
                         <p className="text-gray-500">No hay productos agregados aún</p>
-                        <p className="text-sm text-gray-400 mt-2">Selecciona productos para agregar a la orden</p>
+                        <p className="mt-2 text-sm text-gray-400">Selecciona productos para agregar a la orden</p>
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -574,21 +628,21 @@ function CreateOrder() {
                             >
                               <div className="flex items-start justify-between mb-3">
                                 <div className="flex-1">
-                                  <p className="font-semibold text-gray-900 mb-1">{item.productName || 'Producto'}</p>
+                                  <p className="mb-1 font-semibold text-gray-900">{item.productName || 'Producto'}</p>
                                   <p className="text-sm text-gray-500">{item.categoryName}</p>
-                                  <p className="text-sm text-gray-600 mt-2">
+                                  <p className="mt-2 text-sm text-gray-600">
                                     {quantity} × ${unitCost.toFixed(2)}
                                   </p>
                                 </div>
                                 <div className="text-right">
-                                  <p className="text-xs text-gray-500 mb-1">Subtotal</p>
-                                  <p className="font-bold text-lg text-gray-900">${subtotal.toFixed(2)}</p>
+                                  <p className="mb-1 text-xs text-gray-500">Subtotal</p>
+                                  <p className="text-lg font-bold text-gray-900">${subtotal.toFixed(2)}</p>
                                 </div>
                               </div>
                               <div className="flex gap-2 pt-3 border-t border-gray-100">
                                 <button
                                   onClick={() => handleEditItem(item)}
-                                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors font-medium"
+                                  className="flex items-center justify-center flex-1 gap-2 px-3 py-2 text-sm font-medium text-blue-600 transition-colors rounded-lg bg-blue-50 hover:bg-blue-100"
                                   type="button"
                                 >
                                   <IoPencilOutline className="w-4 h-4" />
@@ -596,7 +650,7 @@ function CreateOrder() {
                                 </button>
                                 <button
                                   onClick={() => handleDeleteItem(item)}
-                                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors font-medium"
+                                  className="flex items-center justify-center flex-1 gap-2 px-3 py-2 text-sm font-medium text-red-600 transition-colors rounded-lg bg-red-50 hover:bg-red-100"
                                   type="button"
                                 >
                                   <IoTrashOutline className="w-4 h-4" />
@@ -610,17 +664,48 @@ function CreateOrder() {
                     )}
                   </div>
 
-                  {/* Footer con botón de cerrar orden */}
-                  <div className="border-t border-gray-200 p-6 bg-gray-50">
-                    <button
-                      onClick={handleCloseOrder}
-                      disabled={isClosingOrder || selectedSaleItems.length === 0}
-                      className="w-full flex items-center justify-center gap-2 bg-green-600 text-white px-6 py-4 rounded-lg hover:bg-green-700 transition-colors font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                      type="button"
-                    >
-                      <IoCheckmarkCircle className="text-xl" />
-                      {isClosingOrder ? 'Cerrando...' : 'Cerrar Orden'}
-                    </button>
+                  {/* Footer con botones de acción */}
+                  <div className="p-6 border-t border-gray-200 bg-gray-50">
+                    {selectedSale && isTableOrder(selectedSale) && (
+                      <div className="p-3 mb-4 border border-blue-200 rounded-lg bg-blue-50">
+                        <div className="flex items-start gap-2">
+                          <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                          </svg>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-blue-900">Orden automática</p>
+                            <p className="mt-1 text-xs text-blue-700">
+                              Esta orden se cerrará automáticamente cuando la mesa {getTableCode(selectedSale)} quede libre.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    <div className="space-y-3">
+                      <button
+                        onClick={handleCloseOrder}
+                        disabled={
+                          isClosingOrder || 
+                          selectedSaleItems.length === 0 || 
+                          (selectedSale && isTableOrder(selectedSale))
+                        }
+                        className="flex items-center justify-center w-full gap-2 px-6 py-4 text-lg font-bold text-white transition-colors bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        type="button"
+                      >
+                        <IoCheckmarkCircle className="text-xl" />
+                        {isClosingOrder ? 'Cerrando...' : 'Cerrar Orden'}
+                      </button>
+                      
+                      <button
+                        onClick={handleDeleteSale}
+                        disabled={isDeletingSale || (selectedSale && isTableOrder(selectedSale))}
+                        className="flex items-center justify-center w-full gap-2 px-4 py-3 font-medium text-red-600 transition-colors bg-white border-2 border-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        type="button"
+                      >
+                        <IoTrashOutline className="text-lg" />
+                        Eliminar Orden
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -628,7 +713,7 @@ function CreateOrder() {
               {/* Overlay para cerrar el carrito al hacer clic fuera */}
               {isCartOpen && (
                 <div
-                  className="fixed inset-0 bg-black bg-opacity-50 z-40"
+                  className="fixed inset-0 z-40 bg-black bg-opacity-50"
                   onClick={() => setIsCartOpen(false)}
                 />
               )}
@@ -792,29 +877,21 @@ function CreateOrder() {
         </div>
       </div>
 
-      {/* Modal de éxito */}
-      {showSuccessModal && (
-        <SuccessOperation
-          message={successMessage}
-          onClose={() => setShowSuccessModal(false)}
-        />
-      )}
-
       {/* Modal de edición de cantidad */}
       {editingItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Editar Cantidad</h3>
+          <div className="w-full max-w-md p-6 mx-4 bg-white shadow-xl rounded-2xl">
+            <h3 className="mb-4 text-xl font-bold text-gray-900">Editar Cantidad</h3>
             
             <div className="mb-6">
-              <p className="text-gray-700 mb-2">
+              <p className="mb-2 text-gray-700">
                 <span className="font-semibold">Producto:</span> {editingItem.productName}
               </p>
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="mb-4 text-sm text-gray-600">
                 Precio unitario: ${(editingItem.unitCost || 0).toFixed(2)}
               </p>
               
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block mb-2 text-sm font-medium text-gray-700">
                 Nueva cantidad:
               </label>
               <input
@@ -826,7 +903,7 @@ function CreateOrder() {
                 autoFocus
               />
               
-              <p className="text-sm text-gray-600 mt-2">
+              <p className="mt-2 text-sm text-gray-600">
                 Nuevo subtotal: ${((editingItem.unitCost || 0) * editQuantity).toFixed(2)}
               </p>
             </div>
@@ -834,7 +911,7 @@ function CreateOrder() {
             <div className="flex gap-3">
               <button
                 onClick={() => setEditingItem(null)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                className="flex-1 px-4 py-2 font-medium text-gray-700 transition-colors border border-gray-300 rounded-lg hover:bg-gray-50"
                 type="button"
               >
                 Cancelar
@@ -851,34 +928,78 @@ function CreateOrder() {
         </div>
       )}
 
-      {/* Modal de confirmación de eliminación */}
+      {/* Modal de confirmación de eliminación de producto */}
       {deletingItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-md w-full mx-4">
+          <div className="w-full max-w-md p-6 mx-4 bg-white shadow-xl rounded-2xl">
             <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full">
               <IoTrashOutline className="w-8 h-8 text-red-600" />
             </div>
             
-            <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">Eliminar Producto</h3>
+            <h3 className="mb-2 text-xl font-bold text-center text-gray-900">Eliminar Producto</h3>
             
-            <p className="text-gray-600 mb-6 text-center">
+            <p className="mb-6 text-center text-gray-600">
               ¿Estás seguro de eliminar <span className="font-semibold">{deletingItem.productName}</span> de la orden?
             </p>
             
             <div className="flex gap-3">
               <button
                 onClick={() => setDeletingItem(null)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                className="flex-1 px-4 py-2 font-medium text-gray-700 transition-colors border border-gray-300 rounded-lg hover:bg-gray-50"
                 type="button"
               >
                 Cancelar
               </button>
               <button
                 onClick={confirmDeleteItem}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                className="flex-1 px-4 py-2 font-medium text-white transition-colors bg-red-600 rounded-lg hover:bg-red-700"
                 type="button"
               >
                 Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmación de eliminación de orden */}
+      {showDeleteSaleModal && selectedSale && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="w-full max-w-md p-6 mx-4 bg-white shadow-xl rounded-2xl">
+            <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full">
+              <IoWarning className="w-8 h-8 text-red-600" />
+            </div>
+            
+            <h3 className="mb-2 text-xl font-bold text-center text-gray-900">Eliminar Orden Completa</h3>
+            
+            <div className="mb-6 text-center text-gray-600">
+              <p className="mb-3">
+                ¿Estás seguro de eliminar la <span className="font-semibold">Orden #{selectedSale.id.slice(0, 8)}</span>?
+              </p>
+              <div className="p-3 border border-red-200 rounded-lg bg-red-50">
+                <p className="text-sm font-medium text-red-800">Esta acción es irreversible</p>
+                <p className="mt-1 text-xs text-red-700">
+                  Se eliminarán todos los productos ({selectedSaleItems.length} item{selectedSaleItems.length !== 1 ? 's' : ''}) de esta orden.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteSaleModal(false)}
+                disabled={isDeletingSale}
+                className="flex-1 px-4 py-2 font-medium text-gray-700 transition-colors border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                type="button"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDeleteSale}
+                disabled={isDeletingSale}
+                className="flex-1 px-4 py-2 font-medium text-white transition-colors bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
+                type="button"
+              >
+                {isDeletingSale ? 'Eliminando...' : 'Eliminar Orden'}
               </button>
             </div>
           </div>
