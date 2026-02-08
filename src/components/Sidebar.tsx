@@ -79,22 +79,22 @@ const ReservationIcon = ({ className }: { className?: string }) => (
 const OWNER_NAVIGATION = [
   { name: 'Home', path: '/home', icon: HomeIcon },
   { name: 'Productos', path: '/products', icon: ShoppingBagIcon },
+  { name: 'Ordenes', path: '/orders/create', icon: DocumentTextIcon },
   { name: 'Mesas', path: '/tables', icon: TableIcon },
   { name: 'Reservas', path: '/reservations', icon: ReservationIcon },
-  { name: 'Crear Orden', path: '/orders/create', icon: DocumentTextIcon },
-  { name: 'Historial de Ventas', path: '/sales-history', icon: ClipboardDocumentListIcon },
-  { name: 'Ranking', path: '/internal-ranking', icon: TrophyIcon },
-  { name: 'Analiticas', path: '/analytics', icon: ChartBarIcon },
   { name: 'Metas', path: '/goals', icon: TargetIcon },
+  { name: 'Historial de Ventas', path: '/sales-history', icon: ClipboardDocumentListIcon },
+  { name: 'Analiticas', path: '/analytics', icon: ChartBarIcon },
+  { name: 'Ranking', path: '/internal-ranking', icon: TrophyIcon },
   { name: 'Mi Negocio', path: '/business', icon: BuildingStorefrontIcon },
   { name: 'Perfil', path: '/profile', icon: UserIcon },
 ]
 
 const EMPLOYEE_NAVIGATION = [
   { name: 'Home', path: '/home', icon: HomeIcon },
+  { name: 'Ordenes', path: '/orders/create', icon: DocumentTextIcon },
   { name: 'Mesas', path: '/tables', icon: TableIcon },
   { name: 'Reservas', path: '/reservations', icon: ReservationIcon },
-  { name: 'Crear Orden', path: '/orders/create', icon: DocumentTextIcon },
   { name: 'Historial de Ventas', path: '/sales-history', icon: ClipboardDocumentListIcon },
   { name: 'Ranking', path: '/internal-ranking', icon: TrophyIcon },
   { name: 'Perfil', path: '/profile', icon: UserIcon },

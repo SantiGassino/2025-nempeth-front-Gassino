@@ -122,4 +122,20 @@ export const salesService = {
       throw error;
     }
   },
+
+  // Eliminar una orden abierta
+  async deleteSale(
+    businessId: string,
+    saleId: string,
+  ): Promise<{ message: string }> {
+    try {
+      const response = await api.delete(
+        `/businesses/${businessId}/sales/${saleId}`,
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting sale:', error);
+      throw error;
+    }
+  },
 };
