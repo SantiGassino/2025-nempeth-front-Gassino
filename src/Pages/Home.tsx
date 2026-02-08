@@ -23,23 +23,23 @@ function Home() {
   // Función para filtrar ventas por período
   const filterSalesByPeriod = (sales: SaleResponse[], period: 'today' | 'week' | 'month' | 'all') => {
     const now = new Date()
-    
+
     switch (period) {
       case 'today': {
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-        return sales.filter(sale => new Date(sale.occurredAt) >= today)
+        return sales.filter(sale => sale.occurredAt && new Date(sale.occurredAt) >= today)
       }
-      
+
       case 'week': {
         const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-        return sales.filter(sale => new Date(sale.occurredAt) >= weekAgo)
+        return sales.filter(sale => sale.occurredAt && new Date(sale.occurredAt) >= weekAgo)
       }
-      
+
       case 'month': {
         const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate())
-        return sales.filter(sale => new Date(sale.occurredAt) >= monthAgo)
+        return sales.filter(sale => sale.occurredAt && new Date(sale.occurredAt) >= monthAgo)
       }
-      
+
       case 'all':
       default:
         return sales
@@ -75,22 +75,22 @@ function Home() {
       try {
         setLoading(true)
         setError(null)
-        
+
         // Cargar detalles del negocio y ventas en paralelo
         const [businessData, salesData] = await Promise.all([
           businessService.getBusinessDetail(businessId),
           salesManagementService.getAllSales(businessId)
         ])
-        
+
         setBusinessDetail(businessData)
         setAllSales(salesData)
-        
+
         // Obtener las últimas 3 ventas
-        const sortedSales = salesData.sort((a, b) => 
-          new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
+        const sortedSales = salesData.sort((a, b) =>
+          new Date(b.occurredAt || 0).getTime() - new Date(a.occurredAt || 0).getTime()
         )
         setRecentSales(sortedSales.slice(0, 3))
-        
+
       } catch (err) {
         console.error('Error cargando datos del dashboard:', err)
         setError('Error al cargar la información del dashboard')
@@ -153,8 +153,8 @@ function Home() {
           </div>
           <h2 className="mb-2 text-xl font-semibold text-gray-900">Error al cargar datos</h2>
           <p className="text-gray-600">{error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="mt-4 px-4 py-2 bg-[#f74116] text-white rounded-lg hover:bg-[#f74116]/90 transition-colors"
           >
             Intentar de nuevo
@@ -167,7 +167,7 @@ function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-[#fff1eb] to-white">
       <div className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
-        
+
         {/* Header */}
         <div className="mb-8">
           <div className="inline-flex items-center gap-2 rounded-full bg-[#f74116]/10 px-4 py-2 text-sm font-semibold text-[#f74116] mb-4">
@@ -181,7 +181,7 @@ function Home() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 gap-6 mb-8 sm:grid-cols-2 lg:grid-cols-3">
-          
+
           {/* Empleados */}
           <div className="bg-white rounded-2xl shadow-sm border border-[#f74116]/10 p-6 hover:shadow-lg transition-all duration-200 group">
             <div className="flex items-center">
@@ -240,7 +240,7 @@ function Home() {
                   <p className="text-xs text-[#f74116] font-medium">{getPeriodText(salesPeriod)}</p>
                 </div>
               </div>
-              
+
               {/* Selector de período mejorado */}
               <div className="relative flex-shrink-0">
                 <button
@@ -248,24 +248,24 @@ function Home() {
                   className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-[#f74116]/30 focus:outline-none focus:ring-2 focus:ring-[#f74116]/20 focus:border-[#f74116] transition-all duration-200 w-full sm:w-auto min-w-[90px] sm:min-w-[110px]"
                 >
                   <span className="truncate">{getPeriodText(salesPeriod)}</span>
-                  <svg 
-                    className={`w-3 h-3 text-gray-400 transition-transform duration-200 flex-shrink-0 ${isDropdownOpen ? 'rotate-180' : ''}`} 
-                    fill="none" 
-                    stroke="currentColor" 
+                  <svg
+                    className={`w-3 h-3 text-gray-400 transition-transform duration-200 flex-shrink-0 ${isDropdownOpen ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
-                
+
                 {isDropdownOpen && (
                   <>
                     {/* Overlay para cerrar al hacer click fuera */}
-                    <div 
-                      className="fixed inset-0 z-10" 
+                    <div
+                      className="fixed inset-0 z-10"
                       onClick={() => setIsDropdownOpen(false)}
                     />
-                    
+
                     {/* Menú desplegable */}
                     <div className="absolute right-0 z-20 py-1 mt-1 duration-200 bg-white border border-gray-200 rounded-lg shadow-lg sm:left-0 top-full w-36 sm:w-40 animate-in fade-in slide-in-from-top-2">
                       {[
@@ -280,11 +280,10 @@ function Home() {
                             setSalesPeriod(option.value as 'today' | 'week' | 'month' | 'all')
                             setIsDropdownOpen(false)
                           }}
-                          className={`w-full text-left px-3 py-2 text-xs hover:bg-[#f74116]/5 hover:text-[#f74116] transition-colors ${
-                            salesPeriod === option.value 
-                              ? 'bg-[#f74116]/10 text-[#f74116] font-medium' 
+                          className={`w-full text-left px-3 py-2 text-xs hover:bg-[#f74116]/5 hover:text-[#f74116] transition-colors ${salesPeriod === option.value
+                              ? 'bg-[#f74116]/10 text-[#f74116] font-medium'
                               : 'text-gray-700'
-                          }`}
+                            }`}
                         >
                           {option.label}
                         </button>
@@ -294,7 +293,7 @@ function Home() {
                 )}
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <p className="text-3xl font-bold text-gray-900">
                 {formatCurrency(totalSalesAmount)}
@@ -320,7 +319,7 @@ function Home() {
         <div className="mb-8">
           <h2 className="mb-4 text-lg font-semibold text-gray-900">Acciones Rápidas</h2>
           <div className={`grid grid-cols-1 gap-4 ${user?.role === 'OWNER' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
-            <button 
+            <button
               onClick={() => navigate('/create-order')}
               className="group bg-gradient-to-r from-[#f74116] to-[#e63912] text-white rounded-xl p-6 text-left hover:shadow-lg transform hover:scale-[1.02] transition-all duration-200"
             >
@@ -343,10 +342,10 @@ function Home() {
                 </svg>
               </div>
             </button>
-            
+
             {/* Botón de Productos - Solo para OWNER */}
             {user?.role === 'OWNER' && (
-              <button 
+              <button
                 onClick={() => navigate('/products')}
                 className="group bg-white border border-gray-200 text-gray-900 rounded-xl p-6 text-left hover:border-[#f74116]/40 hover:shadow-lg transform hover:scale-[1.02] transition-all duration-200"
               >
@@ -370,8 +369,8 @@ function Home() {
                 </div>
               </button>
             )}
-            
-            <button 
+
+            <button
               onClick={() => navigate('/analytics')}
               className="group bg-white border border-gray-200 text-gray-900 rounded-xl p-6 text-left hover:border-[#f74116]/40 hover:shadow-lg transform hover:scale-[1.02] transition-all duration-200"
             >
@@ -404,7 +403,7 @@ function Home() {
               <h2 className="text-xl font-bold text-gray-900">Actividad Reciente</h2>
               <p className="mt-1 text-sm text-gray-500">Últimas ventas realizadas</p>
             </div>
-            <button 
+            <button
               onClick={() => navigate('/sales-history')}
               className="inline-flex items-center text-[#f74116] hover:text-[#f74116]/80 text-sm font-medium transition-colors group"
             >
@@ -414,7 +413,7 @@ function Home() {
               </svg>
             </button>
           </div>
-          
+
           {recentSales.length === 0 ? (
             <div className="py-16 text-center">
               <div className="flex items-center justify-center w-20 h-20 mx-auto mb-4 bg-gray-100 rounded-full">
@@ -426,7 +425,7 @@ function Home() {
               <p className="max-w-sm mx-auto mb-6 text-gray-600">
                 Cuando realices tu primera venta, aparecerá aquí junto con el resto de la actividad
               </p>
-              <button 
+              <button
                 onClick={() => navigate('/create-order')}
                 className="inline-flex items-center px-4 py-2 bg-[#f74116] text-white rounded-lg hover:bg-[#f74116]/90 transition-colors font-medium"
               >
@@ -459,7 +458,7 @@ function Home() {
                           </span>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center justify-between text-xs text-gray-600 pl-11">
                         <div className="flex items-center">
                           <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -471,7 +470,7 @@ function Home() {
                           <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
-                          <span>{formatDate(sale.occurredAt)}</span>
+                          <span>{sale.occurredAt ? formatDate(sale.occurredAt) : 'Sin fecha'}</span>
                         </div>
                       </div>
                     </div>
