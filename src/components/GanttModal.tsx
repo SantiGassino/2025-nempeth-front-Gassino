@@ -49,7 +49,7 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
       const data = await reservationService.getGanttData(businessId, dateStr);
 
       // Ordenar mesas alfabéticamente por tableCode
-      const sortedData = [...data].sort((a, b) => 
+      const sortedData = [...data].sort((a, b) =>
         a.tableCode.localeCompare(b.tableCode, undefined, { numeric: true, sensitivity: 'base' })
       );
 
@@ -84,7 +84,7 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
 
     // Si la reserva empieza antes del día actual, cortarla al inicio del día
     const effectiveStart = resStart < startOfDay ? startOfDay : resStart;
-    
+
     // Si la reserva termina después del día actual, cortarla al final del día
     const effectiveEnd = resEnd > endOfDay ? endOfDay : resEnd;
 
@@ -145,15 +145,15 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
 
     const resStart = new Date(reservation.startDateTime);
     const resEnd = new Date(reservation.endDateTime);
-    
+
     // Buffer: 20 minutos antes del inicio hasta el fin de la reserva
     const bufferStart = new Date(resStart.getTime() - 20 * 60 * 1000);
     const bufferEnd = resEnd;
-    
+
     // Si el buffer empieza/termina fuera del día actual, cortarlo
     const effectiveBufferStart = bufferStart < startOfDay ? startOfDay : bufferStart;
     const effectiveBufferEnd = bufferEnd > endOfDay ? endOfDay : bufferEnd;
-    
+
     // Si el buffer está completamente fuera del día, no mostrarlo
     if (effectiveBufferStart >= endOfDay || effectiveBufferEnd <= startOfDay) {
       return null;
@@ -321,7 +321,7 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
                       </div>
 
                       {/* Timeline con grid de 15 minutos */}
-                      <div 
+                      <div
                         className="relative flex-1 border border-gray-200 bg-gray-50"
                         style={{ height: `${rowHeight}px` }}
                       >
@@ -358,10 +358,10 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
                                     minWidth: '10px',
                                     backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(251, 191, 36, 0.3) 4px, rgba(251, 191, 36, 0.3) 8px)',
                                   }}
-                                  title="Buffer de reserva (20 min antes) - Mesa bloqueada"
+                                  title="Tiempo de espera (20 min antes) - Mesa bloqueada"
                                 />
                               )}
-                              
+
                               {/* Reserva principal */}
                               <div
                                 className={`absolute ${colors.bg} ${colors.border} border-l-4 rounded-r px-1.5 py-0.5 overflow-hidden cursor-pointer hover:shadow-lg hover:z-20 transition-all z-10`}
@@ -407,15 +407,15 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
                 <div className="flex flex-wrap gap-4">
                   {/* Buffer de preparación */}
                   <div className="flex items-center gap-2">
-                    <div 
+                    <div
                       className="w-8 h-4 bg-yellow-100 border-l-2 border-yellow-400 opacity-70"
                       style={{
                         backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(251, 191, 36, 0.3) 4px, rgba(251, 191, 36, 0.3) 8px)',
                       }}
                     />
-                    <span className="text-xs text-gray-600">Buffer (20 min antes)</span>
+                    <span className="text-xs text-gray-600">Espera/Preparación (20 min antes)</span>
                   </div>
-                  
+
                   {/* Estados de reserva */}
                   {Object.entries(STATUS_COLORS).map(([status, colors]) => (
                     <div key={status} className="flex items-center gap-2">
@@ -437,7 +437,7 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
                 <h3 className="mb-3 text-sm font-semibold text-gray-700">Reservas del día:</h3>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {ganttData
-                    .flatMap(table => 
+                    .flatMap(table =>
                       table.reservations.map(reservation => ({
                         ...reservation,
                         tableCode: table.tableCode
@@ -446,17 +446,17 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
                     .sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime())
                     .map((reservation, index) => {
                       const colors = STATUS_COLORS[reservation.status];
-                      const startTime = new Date(reservation.startDateTime).toLocaleTimeString('es-AR', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
+                      const startTime = new Date(reservation.startDateTime).toLocaleTimeString('es-AR', {
+                        hour: '2-digit',
+                        minute: '2-digit'
                       });
-                      const endTime = new Date(reservation.endDateTime).toLocaleTimeString('es-AR', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
+                      const endTime = new Date(reservation.endDateTime).toLocaleTimeString('es-AR', {
+                        hour: '2-digit',
+                        minute: '2-digit'
                       });
 
                       return (
-                        <div 
+                        <div
                           key={`${reservation.reservationId}-${index}`}
                           className={`p-3 ${colors.bg} border ${colors.border} border-l-4 rounded-r-lg hover:shadow-md transition-shadow`}
                         >
@@ -477,7 +477,7 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
                               {reservation.status === 'NO_SHOW' && 'Ausente'}
                             </span>
                           </div>
-                          
+
                           <div className="space-y-1">
                             <div className="flex items-center gap-1.5 text-xs text-gray-700">
                               <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -487,7 +487,7 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
                               <span className="text-gray-400">-</span>
                               <span className="font-medium">{endTime}</span>
                             </div>
-                            
+
                             <div className="flex items-center justify-between text-xs">
                               <div className="flex items-center gap-1.5 text-gray-700">
                                 <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -495,7 +495,7 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
                                 </svg>
                                 <span className="font-medium">{reservation.partySize} {reservation.partySize === 1 ? 'persona' : 'personas'}</span>
                               </div>
-                              
+
                               <div className="flex items-center gap-1.5">
                                 <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -508,7 +508,7 @@ const GanttModal = ({ isOpen, onClose, businessId, initialDate = new Date() }: G
                       );
                     })}
                 </div>
-                
+
                 {ganttData.every(table => table.reservations.length === 0) && (
                   <p className="py-8 text-sm text-center text-gray-500">
                     No hay reservas para este día

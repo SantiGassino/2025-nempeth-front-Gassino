@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { tableService, type Table, type TableStatus, type TableStats } from '../services/tableService'
+import { reservationService } from '../services/reservationService'
 import { useAuth } from '../contexts/useAuth'
 import { isOwner } from '../guards/getDefaultRoute'
 import LoadingScreen from '../components/LoadingScreen'
@@ -360,7 +361,7 @@ function ChangeStatusModal({ isOpen, onClose, onSave, currentStatus, isProcessin
                   Libre <span className="text-xs text-gray-500">(Mesa disponible)</span>
                 </span>
               </label>
-              
+
               {newStatus === 'FREE' && currentStatus !== 'FREE' && (
                 <div className="p-3 mt-2 border border-blue-200 rounded-lg bg-blue-50">
                   <div className="flex items-start gap-2">
@@ -722,6 +723,7 @@ function Tables() {
   const [showReactivateModal, setShowReactivateModal] = useState(false)
   const [tableToReactivate, setTableToReactivate] = useState<Table | null>(null)
   const [isReactivating, setIsReactivating] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
 
   const businessId = user?.businessId
   const userIsOwner = isOwner(user ?? null)
@@ -748,6 +750,26 @@ function Tables() {
   useEffect(() => {
     loadTables()
   }, [loadTables])
+
+  // Sincronizar estados de mesas y recargar
+  const handleSyncAndReload = useCallback(async () => {
+    if (!businessId) return
+
+    try {
+      setIsSyncing(true)
+      // Primero sincronizar estados de mesas con el scheduler
+      await reservationService.syncTableStates(businessId)
+      showSuccess('Estados de mesas sincronizados')
+      // Luego recargar los datos
+      await loadTables()
+    } catch (err) {
+      showErrorFromResponse(err, 'Error al sincronizar estados')
+      // Intentar recargar de todos modos
+      await loadTables()
+    } finally {
+      setIsSyncing(false)
+    }
+  }, [businessId, loadTables, showSuccess, showErrorFromResponse])
 
   // Filtrar y buscar mesas
   const filteredTables = useMemo(() => {
@@ -890,11 +912,12 @@ function Tables() {
             </div>
             <div className="flex gap-2">
               <button
-                onClick={loadTables}
-                className="p-3 transition-colors bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                title="Recargar"
+                onClick={handleSyncAndReload}
+                disabled={isSyncing}
+                className="p-3 transition-colors bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Sincronizar estados y recargar"
               >
-                <IoRefresh className="w-5 h-5 text-gray-600" />
+                <IoRefresh className={`w-5 h-5 text-gray-600 ${isSyncing ? 'animate-spin' : ''}`} />
               </button>
               {userIsOwner && (
                 <button

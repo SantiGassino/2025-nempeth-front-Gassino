@@ -108,7 +108,7 @@ function ReservationCard({
 }: ReservationCardProps) {
   const statusColor = getStatusColor(reservation.status)
   const durationText = formatDuration(reservation.startDateTime, reservation.endDateTime)
-  
+
   // Calcular capacidad total de las mesas asignadas
   const totalTableCapacity = reservation.tables.reduce((sum, table) => sum + table.capacity, 0)
   const extraSeatsNeeded = reservation.partySize - totalTableCapacity
@@ -317,15 +317,15 @@ function ReservationModal({
       setCustomerName(editingReservation.customerName)
       setCustomerContact(editingReservation.customerContact)
       setCustomerDocument(editingReservation.customerDocument)
-      
+
       const start = new Date(editingReservation.startDateTime)
       setStartDate(start.toISOString().split('T')[0])
       setStartTime(start.toTimeString().slice(0, 5))
-      
+
       const end = new Date(editingReservation.endDateTime)
       setEndDate(end.toISOString().split('T')[0])
       setEndTime(end.toTimeString().slice(0, 5))
-      
+
       setPartySize(editingReservation.partySize.toString())
       setSelectedTableIds(editingReservation.tables.map((t) => t.id))
       setForced(editingReservation.forced)
@@ -336,18 +336,18 @@ function ReservationModal({
       const tomorrow = new Date(now)
       tomorrow.setDate(tomorrow.getDate() + 1)
       tomorrow.setHours(20, 0, 0, 0)
-      
+
       setCustomerName('')
       setCustomerContact('')
       setCustomerDocument('')
       setStartDate(tomorrow.toISOString().split('T')[0])
       setStartTime('20:00')
-      
+
       const endTime = new Date(tomorrow)
       endTime.setHours(22, 0, 0, 0)
       setEndDate(endTime.toISOString().split('T')[0])
       setEndTime('22:00')
-      
+
       setPartySize('4')
       setSelectedTableIds([])
       setForced(false)
@@ -372,11 +372,11 @@ function ReservationModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     // Construir ISO 8601 strings con zona horaria
     const startDateTime = `${startDate}T${startTime}:00-03:00`
     const endDateTime = `${endDate}T${endTime}:00-03:00`
-    
+
     onSave({
       customerName: customerName.trim(),
       customerContact: customerContact.trim(),
@@ -554,11 +554,10 @@ function ReservationModal({
               {availableTables.map((table) => (
                 <label
                   key={table.id}
-                  className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                    selectedTableIds.includes(table.id)
-                      ? 'border-[#f74116] bg-[#f74116]/10'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
+                  className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all ${selectedTableIds.includes(table.id)
+                    ? 'border-[#f74116] bg-[#f74116]/10'
+                    : 'border-gray-200 hover:border-gray-300'
+                    }`}
                 >
                   <input
                     type="checkbox"
@@ -599,7 +598,7 @@ function ReservationModal({
             <label htmlFor="forced" className="text-sm text-gray-700">
               Forzar reserva (solo omite validación de capacidad)
               <span className="block mt-1 text-xs text-gray-500">
-                ⚠️ El solapamiento de horarios y buffer (30 min antes + 5 min después) son obligatorios
+                ⚠️ El solapamiento de horarios y el timepo de espera/preparación (20 minutos antes) son obligatorios
               </span>
             </label>
           </div>

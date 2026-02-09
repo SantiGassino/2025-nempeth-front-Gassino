@@ -473,6 +473,33 @@ export const reservationService = {
       throw error;
     }
   },
+
+  /**
+   * Sincronizar estados de mesas manualmente
+   * Permisos: OWNER y EMPLOYEE
+   *
+   * Ejecuta la misma lógica que el scheduler automático (cada 5 min):
+   * - Mesas pasan a RESERVED 30 minutos antes de la reserva
+   * - Mesas vuelven a FREE 5 minutos después de finalizar la reserva
+   *
+   * Uso: Cuando el usuario quiere actualizar los estados inmediatamente
+   * sin esperar el scheduler.
+   *
+   * @param businessId - ID del negocio
+   */
+  syncTableStates: async (
+    businessId: string,
+  ): Promise<{ message: string }> => {
+    try {
+      const response = await api.post(
+        `/businesses/${businessId}/reservations/sync`,
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error al sincronizar estados de mesas:', error);
+      throw error;
+    }
+  },
 };
 
 export default reservationService;
