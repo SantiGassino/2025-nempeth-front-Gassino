@@ -18,13 +18,13 @@ const decodeToken = (token: string): { userId: string; email: string } | null =>
     );
 
     const decoded = JSON.parse(jsonPayload);
-    
+
     // Verifica si el token no ha expirado
     const now = Math.floor(Date.now() / 1000);
     if (decoded.exp && decoded.exp < now) {
       return null; // Token expirado
-    } 
-    
+    }
+
     // Solo retornamos los datos que sabemos que están en el token
     return {
       userId: decoded.userId,
@@ -65,8 +65,8 @@ const selectPrimaryBusiness = (payload: unknown): BusinessMembership | null => {
 
 const fetchCompleteUserData = async (authToken: string): Promise<User | null> => {
   try {
-    const response = await api.get('/users/me', { 
-      headers: { Authorization: `Bearer ${authToken}` } 
+    const response = await api.get('/users/me', {
+      headers: { Authorization: `Bearer ${authToken}` }
     });
 
     if (response.data) {
@@ -102,12 +102,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [token, setToken] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
 
-  useEffect(() => {
-    setIsAuthenticated(!!user && !!token);
-  }, [user, token]);
+  // Computed directly to avoid race conditions on page reload
+  // Previously this was a separate state updated via useEffect, which caused
+  // a 1-render delay where isAuthenticated was false while user/token were set
+  const isAuthenticated = !!user && !!token;
 
   // Verificar token al cargar la app y obtener datos completos del usuario
   useEffect(() => {
@@ -145,12 +145,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     try {
       const response = await AuthService.login(credentials);
-      
+
       if (response.token) {
         const basicUserData = decodeToken(response.token);
         if (basicUserData) {
           setToken(response.token);
-          
+
           // Obtener datos completos del usuario antes de marcar como autenticado
           const completeUserData = await fetchCompleteUserData(response.token);
           if (completeUserData) {
@@ -162,7 +162,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }
         }
       }
-      
+
       return response;
     } catch (error) {
       console.error('Login error:', error);
