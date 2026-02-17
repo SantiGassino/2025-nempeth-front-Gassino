@@ -36,24 +36,24 @@ function CreateOrder() {
   const [selectedCategoryFilters, setSelectedCategoryFilters] = useState<string[]>([])
   const [showFilterDropdown, setShowFilterDropdown] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  
+
   // Estados para manejar órdenes
   const [openSales, setOpenSales] = useState<Sale[]>([])
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null)
   const [selectedSaleItems, setSelectedSaleItems] = useState<SaleItem[]>([])
   const [isCreatingOrder, setIsCreatingOrder] = useState(false)
   const [isClosingOrder, setIsClosingOrder] = useState(false)
-  
+
   // Estados para editar items
   const [editingItem, setEditingItem] = useState<SaleItem | null>(null)
   const [editQuantity, setEditQuantity] = useState(1)
-  
+
   // Estados para confirmar eliminación
   const [deletingItem, setDeletingItem] = useState<SaleItem | null>(null)
-  
+
   // Estado para controlar el carrito
   const [isCartOpen, setIsCartOpen] = useState(false)
-  
+
   // Estado para eliminar orden
   const [isDeletingSale, setIsDeletingSale] = useState(false)
   const [showDeleteSaleModal, setShowDeleteSaleModal] = useState(false)
@@ -78,13 +78,13 @@ function CreateOrder() {
     try {
       setLoading(true)
       const fetchedProducts = await productService.getProducts(businessId)
-      
+
       // Transformar los productos para extraer el categoryId del objeto category
       const transformedProducts = (fetchedProducts as ProductWithCategory[]).map((product) => ({
         ...product,
         categoryId: product.category?.id || ''
       })) as Product[]
-      
+
       setProducts(transformedProducts)
     } catch (err) {
       console.error('Error cargando productos:', err)
@@ -117,7 +117,7 @@ function CreateOrder() {
       showError('Error al cargar los items de la orden')
     }
   }, [businessId, showError])
-  
+
   // Actualizar la orden seleccionada cuando cambian las órdenes abiertas
   useEffect(() => {
     if (selectedSale && openSales.length > 0) {
@@ -137,7 +137,7 @@ function CreateOrder() {
 
     // Filtrar por categoría
     if (selectedCategoryFilters.length > 0) {
-      filtered = filtered.filter(product => 
+      filtered = filtered.filter(product =>
         selectedCategoryFilters.includes(product.categoryId || '')
       )
     }
@@ -145,7 +145,7 @@ function CreateOrder() {
     // Filtrar por búsqueda
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim()
-      filtered = filtered.filter(product => 
+      filtered = filtered.filter(product =>
         product.name.toLowerCase().includes(query) ||
         product.description.toLowerCase().includes(query)
       )
@@ -182,8 +182,8 @@ function CreateOrder() {
 
   // Funciones para manejar filtros de categorías
   const handleToggleCategoryFilter = (categoryId: string) => {
-    setSelectedCategoryFilters(prev => 
-      prev.includes(categoryId) 
+    setSelectedCategoryFilters(prev =>
+      prev.includes(categoryId)
         ? prev.filter(id => id !== categoryId)
         : [...prev, categoryId]
     )
@@ -210,21 +210,21 @@ function CreateOrder() {
     }
 
     setIsCreatingOrder(true)
-    
+
     try {
       const response = await salesService.createSale(businessId)
-      
+
       // Recargar las órdenes abiertas
       await loadOpenSales()
-      
+
       // Seleccionar automáticamente la nueva orden
       const newSale = openSales.find(s => s.id === response.saleId)
       if (newSale) {
         setSelectedSale(newSale)
       }
-      
+
       showSuccess('Nueva orden creada exitosamente')
-      
+
     } catch (err) {
       console.error('Error creando orden:', err)
       showError('Error al crear la orden')
@@ -252,29 +252,29 @@ function CreateOrder() {
     try {
       // Verificar si el producto ya está en la orden
       const existingItem = selectedSaleItems.find(item => item.productName === product.name)
-      
+
       // Si ya existe, sumar la cantidad nueva a la existente
-      const totalQuantity = existingItem 
-        ? existingItem.quantity + quantity 
+      const totalQuantity = existingItem
+        ? existingItem.quantity + quantity
         : quantity
-      
+
       await salesService.addItemToSale(businessId, selectedSale.id, {
         productId: product.id,
         quantity: totalQuantity
       })
-      
+
       // Recargar las órdenes abiertas para actualizar los totales
       await loadOpenSales()
-      
+
       // Recargar los items de la orden seleccionada
       await loadSaleItems(selectedSale.id)
-      
+
       const message = existingItem
         ? `${product.name} actualizado (cantidad total: ${totalQuantity})`
         : `${product.name} agregado a la orden`
-      
+
       showSuccess(message)
-      
+
     } catch (err) {
       console.error('Error agregando producto a la orden:', err)
       showError('Error al agregar el producto a la orden')
@@ -295,19 +295,19 @@ function CreateOrder() {
     }
 
     setIsClosingOrder(true)
-    
+
     try {
       await salesService.closeSale(businessId, selectedSale.id)
-      
+
       // Limpiar la orden seleccionada y sus items
       setSelectedSale(null)
       setSelectedSaleItems([])
-      
+
       // Recargar las órdenes abiertas
       await loadOpenSales()
-      
+
       showSuccess('Orden cerrada exitosamente')
-      
+
     } catch (err: any) {
       console.error('Error cerrando orden:', err)
       // Capturar error 400 específico de órdenes de mesa
@@ -333,7 +333,7 @@ function CreateOrder() {
     try {
       // Buscar el producto por nombre para obtener su ID
       const product = products.find(p => p.name === editingItem.productName)
-      
+
       if (!product) {
         showError('No se pudo encontrar el producto')
         return
@@ -344,14 +344,14 @@ function CreateOrder() {
         productId: product.id,
         quantity: editQuantity
       })
-      
+
       // Recargar las órdenes y los items
       await loadOpenSales()
       await loadSaleItems(selectedSale.id)
-      
+
       setEditingItem(null)
       showSuccess('Cantidad actualizada')
-      
+
     } catch (err) {
       console.error('Error actualizando item:', err)
       showError('Error al actualizar el item')
@@ -368,7 +368,7 @@ function CreateOrder() {
     try {
       // Buscar el producto por nombre para obtener su ID
       const product = products.find(p => p.name === deletingItem.productName)
-      
+
       if (!product) {
         showError('No se pudo encontrar el producto')
         return
@@ -379,14 +379,14 @@ function CreateOrder() {
         productId: product.id,
         quantity: 0
       })
-      
+
       // Recargar las órdenes y los items
       await loadOpenSales()
       await loadSaleItems(selectedSale.id)
-      
+
       setDeletingItem(null)
       showSuccess(`${deletingItem.productName} eliminado de la orden`)
-      
+
     } catch (err) {
       console.error('Error eliminando item:', err)
       showError('Error al eliminar el item')
@@ -396,34 +396,34 @@ function CreateOrder() {
 
   const handleDeleteSale = () => {
     if (!selectedSale) return
-    
+
     // Verificar si es una orden de mesa
     if (isTableOrder(selectedSale)) {
       showError(`No se puede eliminar esta orden. Está asociada a la mesa ${getTableCode(selectedSale)}. Libere la mesa primero para cerrar la orden automáticamente.`)
       return
     }
-    
+
     setShowDeleteSaleModal(true)
   }
 
   const confirmDeleteSale = async () => {
     if (!selectedSale || !businessId) return
-    
+
     setIsDeletingSale(true)
-    
+
     try {
       await salesService.deleteSale(businessId, selectedSale.id)
-      
+
       // Limpiar la orden seleccionada y sus items
       setSelectedSale(null)
       setSelectedSaleItems([])
       setShowDeleteSaleModal(false)
-      
+
       // Recargar las órdenes abiertas
       await loadOpenSales()
-      
+
       showSuccess('Orden eliminada exitosamente')
-      
+
     } catch (err: any) {
       console.error('Error eliminando orden:', err)
       // Capturar errores específicos del backend
@@ -440,7 +440,7 @@ function CreateOrder() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-[#fff1eb] to-white">
       <div className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
-        
+
         {/* Header */}
         <div className="mb-8">
           <div className="inline-flex items-center gap-2 rounded-full bg-[#f74116]/10 px-4 py-2 text-sm font-semibold text-[#f74116] mb-4">
@@ -472,7 +472,7 @@ function CreateOrder() {
             <h2 className="text-xl font-bold text-gray-900">Órdenes Abiertas</h2>
             <span className="text-sm text-gray-500">{openSales.length} orden(es)</span>
           </div>
-          
+
           {openSales.length === 0 ? (
             <div className="py-8 text-center">
               <p className="text-gray-500">No hay órdenes abiertas. Crea una nueva para comenzar.</p>
@@ -484,20 +484,20 @@ function CreateOrder() {
                 const saleTotal = sale.items?.reduce((sum, item) => {
                   return sum + (item.lineTotal || 0)
                 }, 0) || 0
-                
+
                 const isAutomatic = isTableOrder(sale)
                 const tableCode = getTableCode(sale)
-                
+
                 return (
                   <button
                     key={sale.id}
                     onClick={() => handleSelectSale(sale)}
                     className={`
                       p-4 rounded-lg border-2 text-left transition-all duration-200
-                      ${selectedSale?.id === sale.id 
+                      ${selectedSale?.id === sale.id
                         ? isAutomatic
                           ? 'border-blue-500 bg-blue-50 shadow-md'
-                          : 'border-[#f74116] bg-[#f74116]/5 shadow-md' 
+                          : 'border-[#f74116] bg-[#f74116]/5 shadow-md'
                         : 'border-gray-200 hover:border-[#f74116]/50 hover:shadow-sm'
                       }
                     `}
@@ -512,7 +512,7 @@ function CreateOrder() {
                             </svg>
                           )}
                           <h3 className="font-semibold text-gray-900">
-                            {isAutomatic && tableCode ? `Mesa ${tableCode}` : `Orden #${sale.id.slice(0, 8)}`}
+                            {isAutomatic && tableCode ? `Mesa ${tableCode}` : `Orden #${sale.code}`}
                           </h3>
                         </div>
                         {isAutomatic && (
@@ -522,9 +522,8 @@ function CreateOrder() {
                         )}
                       </div>
                       {selectedSale?.id === sale.id && (
-                        <span className={`flex items-center justify-center w-6 h-6 rounded-full ${
-                          isAutomatic ? 'bg-blue-500' : 'bg-[#f74116]'
-                        }`}>
+                        <span className={`flex items-center justify-center w-6 h-6 rounded-full ${isAutomatic ? 'bg-blue-500' : 'bg-[#f74116]'
+                          }`}>
                           <IoCheckmarkCircle className="text-white" />
                         </span>
                       )}
@@ -547,7 +546,7 @@ function CreateOrder() {
           const totalCalculado = selectedSaleItems.reduce((sum, item) => {
             return sum + (item.lineTotal || 0)
           }, 0)
-          
+
           return (
             <>
               {/* Botón flotante */}
@@ -571,9 +570,8 @@ function CreateOrder() {
 
               {/* Panel lateral del carrito */}
               <div
-                className={`fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white shadow-2xl transform transition-transform duration-300 ease-in-out ${
-                  isCartOpen ? 'translate-x-0' : 'translate-x-full'
-                }`}
+                className={`fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white shadow-2xl transform transition-transform duration-300 ease-in-out ${isCartOpen ? 'translate-x-0' : 'translate-x-full'
+                  }`}
               >
                 <div className="flex flex-col h-full">
                   {/* Header del carrito */}
@@ -583,7 +581,7 @@ function CreateOrder() {
                         <IoCartOutline className="w-8 h-8" />
                         <div>
                           <h3 className="text-xl font-bold">
-                            Orden #{selectedSale.id.slice(0, 8)}
+                            Orden #{selectedSale.code}
                           </h3>
                           <p className="text-sm text-white/80">{selectedSaleItems.length} producto(s)</p>
                         </div>
@@ -620,7 +618,7 @@ function CreateOrder() {
                           const unitCost = item.unitCost || 0
                           const quantity = item.quantity || 0
                           const subtotal = item.lineTotal || 0
-                          
+
                           return (
                             <div
                               key={item.id}
@@ -685,8 +683,8 @@ function CreateOrder() {
                       <button
                         onClick={handleCloseOrder}
                         disabled={
-                          isClosingOrder || 
-                          selectedSaleItems.length === 0 || 
+                          isClosingOrder ||
+                          selectedSaleItems.length === 0 ||
                           (selectedSale && isTableOrder(selectedSale))
                         }
                         className="flex items-center justify-center w-full gap-2 px-6 py-4 text-lg font-bold text-white transition-colors bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -695,7 +693,7 @@ function CreateOrder() {
                         <IoCheckmarkCircle className="text-xl" />
                         {isClosingOrder ? 'Cerrando...' : 'Cerrar Orden'}
                       </button>
-                      
+
                       <button
                         onClick={handleDeleteSale}
                         disabled={isDeletingSale || (selectedSale && isTableOrder(selectedSale))}
@@ -746,14 +744,14 @@ function CreateOrder() {
                 <IoFilterCircle className="w-4 h-4" />
                 <span className="text-sm font-medium">Filtrar por categoría</span>
               </button>
-              
+
               {/* Dropdown menu */}
               {showFilterDropdown && (
                 <div className="absolute left-0 z-50 w-64 py-2 mt-2 bg-white border border-gray-200 shadow-xl top-full rounded-xl">
                   <div className="px-4 py-2 border-b border-gray-100">
                     <h4 className="text-sm font-semibold text-gray-800">Seleccionar categorías</h4>
                   </div>
-                  
+
                   <div className="overflow-y-auto max-h-64">
                     {categories.map(category => (
                       <button
@@ -773,7 +771,7 @@ function CreateOrder() {
                       </button>
                     ))}
                   </div>
-                  
+
                   {selectedCategoryFilters.length > 0 && (
                     <div className="px-4 py-2 border-t border-gray-100">
                       <button
@@ -795,15 +793,15 @@ function CreateOrder() {
             {selectedCategoryFilters.map(categoryId => {
               const category = categories.find(cat => cat.id === categoryId)
               if (!category) return null
-              
+
               return (
-                <div 
+                <div
                   key={categoryId}
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#f74116] bg-[#f74116]/10 border border-[#f74116]/20 rounded-full"
                 >
                   <span>{category.icon}</span>
                   <span>{category.name}</span>
-                  <button 
+                  <button
                     className="ml-1 font-bold text-[#f74116] hover:text-[#f74116]/80"
                     onClick={() => handleToggleCategoryFilter(categoryId)}
                     type="button"
@@ -849,7 +847,7 @@ function CreateOrder() {
             </div>
           ) : filteredProducts.length === 0 ? (
             <div className="py-16 text-center">
-              <EmptyState  />
+              <EmptyState />
             </div>
           ) : (
             <>
@@ -861,7 +859,7 @@ function CreateOrder() {
                   </p>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
                 {filteredProducts.map(product => (
                   <OrderProductCard
@@ -882,7 +880,7 @@ function CreateOrder() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="w-full max-w-md p-6 mx-4 bg-white shadow-xl rounded-2xl">
             <h3 className="mb-4 text-xl font-bold text-gray-900">Editar Cantidad</h3>
-            
+
             <div className="mb-6">
               <p className="mb-2 text-gray-700">
                 <span className="font-semibold">Producto:</span> {editingItem.productName}
@@ -890,7 +888,7 @@ function CreateOrder() {
               <p className="mb-4 text-sm text-gray-600">
                 Precio unitario: ${(editingItem.unitCost || 0).toFixed(2)}
               </p>
-              
+
               <label className="block mb-2 text-sm font-medium text-gray-700">
                 Nueva cantidad:
               </label>
@@ -902,12 +900,12 @@ function CreateOrder() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#f74116]/20 focus:border-[#f74116]"
                 autoFocus
               />
-              
+
               <p className="mt-2 text-sm text-gray-600">
                 Nuevo subtotal: ${((editingItem.unitCost || 0) * editQuantity).toFixed(2)}
               </p>
             </div>
-            
+
             <div className="flex gap-3">
               <button
                 onClick={() => setEditingItem(null)}
@@ -935,13 +933,13 @@ function CreateOrder() {
             <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full">
               <IoTrashOutline className="w-8 h-8 text-red-600" />
             </div>
-            
+
             <h3 className="mb-2 text-xl font-bold text-center text-gray-900">Eliminar Producto</h3>
-            
+
             <p className="mb-6 text-center text-gray-600">
               ¿Estás seguro de eliminar <span className="font-semibold">{deletingItem.productName}</span> de la orden?
             </p>
-            
+
             <div className="flex gap-3">
               <button
                 onClick={() => setDeletingItem(null)}
@@ -969,12 +967,12 @@ function CreateOrder() {
             <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full">
               <IoWarning className="w-8 h-8 text-red-600" />
             </div>
-            
+
             <h3 className="mb-2 text-xl font-bold text-center text-gray-900">Eliminar Orden Completa</h3>
-            
+
             <div className="mb-6 text-center text-gray-600">
               <p className="mb-3">
-                ¿Estás seguro de eliminar la <span className="font-semibold">Orden #{selectedSale.id.slice(0, 8)}</span>?
+                ¿Estás seguro de eliminar la <span className="font-semibold">Orden #{selectedSale.code}</span>?
               </p>
               <div className="p-3 border border-red-200 rounded-lg bg-red-50">
                 <p className="text-sm font-medium text-red-800">Esta acción es irreversible</p>
@@ -983,7 +981,7 @@ function CreateOrder() {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteSaleModal(false)}

@@ -26,6 +26,7 @@ export interface SaleTableInfo {
 
 export interface Sale {
   id: string;
+  code: string;
   businessId: string;
   items?: SaleItem[];
   createdAt: string;
@@ -39,6 +40,7 @@ export interface Sale {
 
 export interface CreateSaleResponse {
   saleId: string;
+  code: string;
 }
 
 export const salesService = {

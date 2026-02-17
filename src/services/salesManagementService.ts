@@ -17,6 +17,7 @@ export interface SaleTableInfo {
 
 export interface SaleResponse {
   id: string;
+  code: string;
   occurredAt: string | null;
   totalAmount: number;
   createdByUserName: string;
