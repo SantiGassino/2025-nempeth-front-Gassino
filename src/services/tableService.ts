@@ -3,6 +3,14 @@ import api from './api';
 // Estados de mesa según la documentación
 export type TableStatus = 'FREE' | 'RESERVED' | 'OCCUPIED' | 'INACTIVE';
 
+// Reserva próxima asociada a una mesa
+export interface UpcomingReservation {
+  reservationId: string;
+  customerName: string;
+  startsAt: string;
+  minutesUntilStart: number;
+}
+
 // Interfaz principal de Mesa
 export interface Table {
   id: string;
@@ -10,6 +18,7 @@ export interface Table {
   capacity: number;
   sector: string;
   status: TableStatus;
+  upcomingReservation: UpcomingReservation | null;
 }
 
 // Request para crear mesa

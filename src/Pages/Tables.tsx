@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/useAuth'
 import { isOwner } from '../guards/getDefaultRoute'
 import LoadingScreen from '../components/LoadingScreen'
 import { useToast } from '../hooks/useToast'
-import { IoAddCircleOutline, IoRefresh, IoSearchOutline } from 'react-icons/io5'
+import { IoAddCircleOutline, IoRefresh, IoSearchOutline, IoTimeOutline, IoAlertCircleOutline } from 'react-icons/io5'
 
 // Iconos SVG
 const TableIcon = ({ className }: { className?: string }) => (
@@ -57,12 +57,147 @@ interface TableCardProps {
   isOwner: boolean
 }
 
+// Componente de alerta de reserva próxima
+function UpcomingReservationAlert({ table }: { table: Table }) {
+  const reservation = table.upcomingReservation
+  if (!reservation) return null
+
+  const mins = reservation.minutesUntilStart
+  // La mesa cambia a RESERVED 20 min antes de la reserva, lo que importa es cuánto falta para ese cambio
+  const minsUntilChange = mins - 20
+
+  // Mesa OCCUPIED y el cambio de estado es inminente (ya pasó o faltan pocos minutos)
+  if (table.status === 'OCCUPIED' && minsUntilChange <= 0) {
+    return (
+      <div className="p-3 border border-red-300 rounded-lg bg-red-50 animate-pulse">
+        <div className="flex items-start gap-2">
+          <IoAlertCircleOutline className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-bold text-red-800">
+              ⚠️ Cambio de estado inminente
+            </p>
+            <p className="text-xs text-red-700 mt-0.5">
+              Reserva a nombre de <strong>{reservation.customerName}</strong>.
+              La mesa pasará a Reservada en cualquier momento y la orden se cerrará automáticamente.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Mesa OCCUPIED con poco tiempo para el cambio (<=10 min para que cambie)
+  if (table.status === 'OCCUPIED' && minsUntilChange <= 10) {
+    return (
+      <div className="p-3 border border-orange-300 rounded-lg bg-orange-50">
+        <div className="flex items-start gap-2">
+          <IoAlertCircleOutline className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-bold text-orange-800">
+              ⚠️ La mesa cambiará a Reservada en ~{minsUntilChange} min
+            </p>
+            <p className="text-xs text-orange-700 mt-0.5">
+              Reserva a nombre de <strong>{reservation.customerName}</strong> (comienza en {mins} min).
+              La orden se cerrará automáticamente cuando la reserva se ponga en marcha.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Mesa RESERVED: mostrar para quién es
+  if (table.status === 'RESERVED') {
+    return (
+      <div className="p-3 border border-yellow-300 rounded-lg bg-yellow-50">
+        <div className="flex items-start gap-2">
+          <IoTimeOutline className="w-5 h-5 text-yellow-700 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-semibold text-yellow-800">
+              Reservada para {reservation.customerName}
+            </p>
+            <p className="text-xs text-yellow-700 mt-0.5">
+              {mins <= 0
+                ? 'La reserva ya debería haber comenzado'
+                : `Comienza en ${mins} min`}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Mesa FREE u OCCUPIED con reserva a futuro
+  if (table.status === 'FREE' || table.status === 'OCCUPIED') {
+    const isUrgent = minsUntilChange <= 10
+    const changeLabel = minsUntilChange <= 0
+      ? 'Cambiará a Reservada en cualquier momento'
+      : `Cambiará a Reservada en ~${minsUntilChange} min`
+    return (
+      <div className={`p-3 border rounded-lg ${
+        isUrgent
+          ? 'border-orange-300 bg-orange-50'
+          : 'border-blue-200 bg-blue-50'
+      }`}>
+        <div className="flex items-start gap-2">
+          <IoTimeOutline className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+            isUrgent ? 'text-orange-600' : 'text-blue-600'
+          }`} />
+          <div>
+            <p className={`text-xs font-semibold ${
+              isUrgent ? 'text-orange-800' : 'text-blue-800'
+            }`}>
+              {isUrgent ? '⚠️ ' : ''}Reserva en {mins} min
+            </p>
+            <p className={`text-xs mt-0.5 ${
+              isUrgent ? 'text-orange-700' : 'text-blue-700'
+            }`}>
+              Cliente: {reservation.customerName} — {changeLabel}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return null
+}
+
 function TableCard({ table, onEdit, onDelete, onReactivate, onChangeStatus, onChangeCapacity, isOwner }: TableCardProps) {
   const statusColor = getStatusColor(table.status)
   const isInactive = table.status === 'INACTIVE'
 
+  // Badge de reserva próxima para el header
+  const reservationBadge = (() => {
+    if (!table.upcomingReservation || isInactive) return null
+    const mins = table.upcomingReservation.minutesUntilStart
+    const minsUntilChange = mins - 20
+    const isUrgent = minsUntilChange <= 10
+    const isCritical = minsUntilChange <= 0
+    return (
+      <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full ${
+        isCritical
+          ? 'bg-red-100 text-red-700 border border-red-300 animate-pulse'
+          : isUrgent
+            ? 'bg-orange-100 text-orange-700 border border-orange-300'
+            : 'bg-blue-100 text-blue-700 border border-blue-200'
+      }`}>
+        <IoTimeOutline className="w-3 h-3" />
+        {isCritical ? `Cambia ya · Reserva en ${mins} min` : `Cambia en ~${minsUntilChange} min`}
+      </span>
+    )
+  })()
+
   return (
-    <div className={`overflow-hidden transition-all duration-200 bg-white border border-gray-200 shadow-sm rounded-xl hover:shadow-md ${isInactive ? 'opacity-75' : ''}`}>
+    <div className={`overflow-hidden transition-all duration-200 bg-white border shadow-sm rounded-xl hover:shadow-md ${
+      isInactive
+        ? 'opacity-75 border-gray-200'
+        : table.upcomingReservation && (table.upcomingReservation.minutesUntilStart - 20) <= 0 && table.status === 'OCCUPIED'
+          ? 'border-red-300 ring-2 ring-red-200'
+          : table.upcomingReservation && (table.upcomingReservation.minutesUntilStart - 20) <= 10
+            ? 'border-orange-300 ring-1 ring-orange-200'
+            : 'border-gray-200'
+    }`}>
       {/* Header con código y estado */}
       <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
         <div className="flex items-center justify-between">
@@ -75,9 +210,12 @@ function TableCard({ table, onEdit, onDelete, onReactivate, onChangeStatus, onCh
               <p className="text-sm text-gray-500">{table.sector}</p>
             </div>
           </div>
-          <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${statusColor}`}>
-            {getStatusText(table.status)}
-          </span>
+          <div className="flex flex-col items-end gap-1">
+            <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${statusColor}`}>
+              {getStatusText(table.status)}
+            </span>
+            {reservationBadge}
+          </div>
         </div>
       </div>
 
@@ -91,6 +229,10 @@ function TableCard({ table, onEdit, onDelete, onReactivate, onChangeStatus, onCh
             <span className="font-semibold">Capacidad:</span> {table.capacity} {table.capacity === 1 ? 'persona' : 'personas'}
           </span>
         </div>
+
+        {/* Alerta de reserva próxima */}
+        <UpcomingReservationAlert table={table} />
+
         {isInactive && (
           <div className="p-3 border border-gray-200 rounded-lg bg-gray-50">
             <div className="flex items-start gap-2">
@@ -116,7 +258,7 @@ function TableCard({ table, onEdit, onDelete, onReactivate, onChangeStatus, onCh
             {isOwner && (
               <button
                 onClick={() => onReactivate(table)}
-                className="w-full px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors duration-200"
+                className="w-full px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 bg-green-600 rounded-lg hover:bg-green-700"
               >
                 ✓ Reactivar Mesa
               </button>
@@ -370,7 +512,7 @@ function ChangeStatusModal({ isOpen, onClose, onSave, currentStatus, isProcessin
                     </svg>
                     <div className="flex-1">
                       <p className="text-sm font-semibold text-blue-900">Cierre automático de orden</p>
-                      <p className="text-xs text-blue-700 mt-1">
+                      <p className="mt-1 text-xs text-blue-700">
                         Si esta mesa tiene una orden abierta asociada, se cerrará automáticamente al confirmar el cambio a estado Libre.
                       </p>
                     </div>
@@ -395,7 +537,7 @@ function ChangeStatusModal({ isOpen, onClose, onSave, currentStatus, isProcessin
             </div>
             <div className="p-3 mt-3 border border-yellow-200 rounded-lg bg-yellow-50">
               <p className="text-xs text-yellow-800">
-                ⚠️ <strong>Nota:</strong> El estado RESERVADO se asigna automáticamente 30 minutos antes de una reserva y se libera 5 minutos después de su finalización.
+                ⚠️ <strong>Nota:</strong> El estado RESERVADO se asigna automáticamente 20 minutos antes de una reserva.
               </p>
             </div>
           </div>
@@ -479,7 +621,7 @@ function ChangeCapacityModal({ isOpen, onClose, onSave, currentCapacity, isProce
             <p className="mt-2 text-sm text-gray-600">
               Capacidad actual: <strong>{currentCapacity}</strong> {currentCapacity === 1 ? 'persona' : 'personas'}
             </p>
-            <div className="p-3 mt-3 border border-yellow-200 rounded-lg bg-yellow-50 space-y-2">
+            <div className="p-3 mt-3 space-y-2 border border-yellow-200 rounded-lg bg-yellow-50">
               <p className="text-xs text-yellow-800">
                 ⚠️ Solo se puede cambiar la capacidad de mesas en estado LIBRE.
               </p>
@@ -753,6 +895,20 @@ function Tables() {
   useEffect(() => {
     loadTables()
   }, [loadTables])
+
+  // Auto-polling cada 45 segundos para mantener info de reservas actualizada
+  // Se pausa si hay algún modal abierto para no resetear formularios
+  const anyModalOpen = showTableModal || showStatusModal || showCapacityModal || showDeleteModal || showReactivateModal
+
+  useEffect(() => {
+    if (!businessId || anyModalOpen) return
+
+    const interval = setInterval(() => {
+      loadTables()
+    }, 45000)
+
+    return () => clearInterval(interval)
+  }, [businessId, loadTables, anyModalOpen])
 
   // Sincronizar estados de mesas y recargar
   const handleSyncAndReload = useCallback(async () => {
