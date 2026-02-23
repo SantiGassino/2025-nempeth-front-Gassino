@@ -225,6 +225,140 @@ function ReservationCard({ reservation, onViewDetails }: ReservationCardProps) {
   )
 }
 
+// Modal de detalles de reserva
+interface ReservationDetailsModalProps {
+  isOpen: boolean
+  onClose: () => void
+  reservation: Reservation | null
+}
+
+function ReservationDetailsModal({ isOpen, onClose, reservation }: ReservationDetailsModalProps) {
+  if (!isOpen || !reservation) return null
+
+  const statusColor = getStatusColor(reservation.status)
+
+  return (
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-2xl overflow-hidden bg-white shadow-2xl rounded-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-[#f74116]/5 to-white">
+          <h3 className="text-xl font-bold text-gray-900">Detalles de Reserva</h3>
+          <button className="text-2xl text-gray-500 hover:text-gray-700" onClick={onClose} type="button">
+            ×
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+          {/* Estado */}
+          <div className="flex items-center justify-center">
+            <span className={`px-4 py-2 text-sm font-semibold rounded-full border ${statusColor}`}>
+              {getStatusText(reservation.status)}
+            </span>
+          </div>
+
+          {/* Información del cliente */}
+          <div className="p-4 rounded-lg bg-gray-50">
+            <h4 className="mb-3 text-sm font-bold text-gray-900">Información del Cliente</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Nombre:</span>
+                <span className="text-sm font-semibold text-gray-900">{reservation.customerName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">DNI:</span>
+                <span className="text-sm font-semibold text-gray-900">{reservation.customerDocument}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Contacto:</span>
+                <span className="text-sm font-semibold text-gray-900">{reservation.customerContact}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Tamaño del grupo:</span>
+                <span className="text-sm font-semibold text-gray-900">
+                  {reservation.partySize} {reservation.partySize === 1 ? 'persona' : 'personas'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Horario */}
+          <div className="p-4 rounded-lg bg-gray-50">
+            <h4 className="mb-3 text-sm font-bold text-gray-900">Horario</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Inicio:</span>
+                <span className="text-sm font-semibold text-gray-900">{formatDateTime(reservation.startDateTime)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Fin:</span>
+                <span className="text-sm font-semibold text-gray-900">{formatDateTime(reservation.endDateTime)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Duración:</span>
+                <span className="text-sm font-semibold text-gray-900">{formatDuration(reservation.startDateTime, reservation.endDateTime)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Mesas */}
+          <div className="p-4 rounded-lg bg-gray-50">
+            <h4 className="mb-3 text-sm font-bold text-gray-900">Mesas Asignadas</h4>
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+              {reservation.tables.map((table) => (
+                <div key={table.id} className="p-3 text-center bg-white border border-gray-200 rounded-lg">
+                  <p className="font-semibold text-gray-900">{table.tableCode}</p>
+                  <p className="text-xs text-gray-500">Capacidad: {table.capacity}</p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-sm text-gray-600">
+              Capacidad total: <strong>{reservation.tables.reduce((sum, t) => sum + t.capacity, 0)}</strong> personas
+            </p>
+          </div>
+
+          {/* Información adicional */}
+          <div className="p-4 rounded-lg bg-gray-50">
+            <h4 className="mb-3 text-sm font-bold text-gray-900">Información Adicional</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Creada por:</span>
+                <span className="text-sm font-semibold text-gray-900">{reservation.createdBy}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Fecha de creación:</span>
+                <span className="text-sm font-semibold text-gray-900">{formatDateTime(reservation.createdAt)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Reserva forzada:</span>
+                <span className="text-sm font-semibold text-gray-900">{reservation.forced ? 'Sí' : 'No'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Notas */}
+          {reservation.notes && (
+            <div className="p-4 border border-yellow-200 rounded-lg bg-yellow-50">
+              <h4 className="mb-2 text-sm font-bold text-gray-900">Notas</h4>
+              <p className="text-sm italic text-gray-700">{reservation.notes}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+          <button
+            onClick={onClose}
+            className="w-full px-4 py-2 text-sm font-semibold text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Componente principal
 function ReservationHistory() {
   const { user } = useAuth()
@@ -232,6 +366,8 @@ function ReservationHistory() {
   const [analytics, setAnalytics] = useState<ReservationAnalytics | null>(null)
   const [pastReservations, setPastReservations] = useState<Reservation[]>([])
   const [loading, setLoading] = useState(true)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null)
 
   // Filtros
   const [searchQuery, setSearchQuery] = useState('')
@@ -624,12 +760,28 @@ function ReservationHistory() {
           ) : (
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {filteredReservations.map((reservation) => (
-                <ReservationCard key={reservation.id} reservation={reservation} onViewDetails={() => {}} />
+              <ReservationCard
+                key={reservation.id}
+                reservation={reservation}
+                onViewDetails={(r) => {
+                  setSelectedReservation(r)
+                  setShowDetailsModal(true)
+                }}
+              />
               ))}
             </div>
           )}
         </div>
       </div>
+
+      <ReservationDetailsModal
+        isOpen={showDetailsModal}
+        onClose={() => {
+          setShowDetailsModal(false)
+          setSelectedReservation(null)
+        }}
+        reservation={selectedReservation}
+      />
     </div>
   )
 }
