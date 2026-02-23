@@ -319,12 +319,18 @@ function ReservationModal({
       setCustomerDocument(editingReservation.customerDocument)
 
       const start = new Date(editingReservation.startDateTime)
-      setStartDate(start.toISOString().split('T')[0])
-      setStartTime(start.toTimeString().slice(0, 5))
+      const startYear = start.getFullYear()
+      const startMonth = String(start.getMonth() + 1).padStart(2, '0')
+      const startDay = String(start.getDate()).padStart(2, '0')
+      setStartDate(`${startYear}-${startMonth}-${startDay}`)
+      setStartTime(`${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`)
 
       const end = new Date(editingReservation.endDateTime)
-      setEndDate(end.toISOString().split('T')[0])
-      setEndTime(end.toTimeString().slice(0, 5))
+      const endYear = end.getFullYear()
+      const endMonth = String(end.getMonth() + 1).padStart(2, '0')
+      const endDay = String(end.getDate()).padStart(2, '0')
+      setEndDate(`${endYear}-${endMonth}-${endDay}`)
+      setEndTime(`${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`)
 
       setPartySize(editingReservation.partySize.toString())
       setSelectedTableIds(editingReservation.tables.map((t) => t.id))
