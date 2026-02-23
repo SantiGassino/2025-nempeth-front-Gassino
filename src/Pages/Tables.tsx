@@ -479,9 +479,12 @@ function ChangeCapacityModal({ isOpen, onClose, onSave, currentCapacity, isProce
             <p className="mt-2 text-sm text-gray-600">
               Capacidad actual: <strong>{currentCapacity}</strong> {currentCapacity === 1 ? 'persona' : 'personas'}
             </p>
-            <div className="p-3 mt-3 border border-yellow-200 rounded-lg bg-yellow-50">
+            <div className="p-3 mt-3 border border-yellow-200 rounded-lg bg-yellow-50 space-y-2">
               <p className="text-xs text-yellow-800">
                 ⚠️ Solo se puede cambiar la capacidad de mesas en estado LIBRE.
+              </p>
+              <p className="text-xs text-yellow-800">
+                ⚠️ Si la mesa está asociada a <strong>reservas futuras</strong>, su capacidad para dichas reservas podría verse afectada. Se recomienda verificarlo antes de editar.
               </p>
             </div>
           </div>
